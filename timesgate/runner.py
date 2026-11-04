@@ -1,6 +1,8 @@
 """Slot scheduling: each slot runs its widgets on their intervals and shows the first one that has frames."""
 import hashlib
 import logging
+import signal
+import sys
 import threading
 import time
 
@@ -71,16 +73,44 @@ class Slot:
             stop.wait(max(0.0, wake - time.time()))
 
 
+_console_handler = None  # must stay referenced, or ctypes frees the callback
+
+
+def on_console_close(callback):
+    """Windows: call `callback` when the console window is closed; Windows waits ~5 s, then kills the process.
+
+    Logoff / shutdown events never arrive: Windows skips them for processes that load user32/gdi32 (Pillow does).
+    Ctrl+C is not handled here (it raises KeyboardInterrupt).
+    """
+    global _console_handler
+    if sys.platform != "win32":
+        return
+    import ctypes
+
+    @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_uint)
+    def handler(event):
+        if event == 2:  # CTRL_CLOSE_EVENT
+            callback()
+        return False  # continue with the default handling
+
+    _console_handler = handler
+    ctypes.windll.kernel32.SetConsoleCtrlHandler(handler, True)
+
+
 def run(slots, device):
     stop = threading.Event()
     threads = [threading.Thread(target=s.run, args=(device, stop), name=f"slot{s.number}", daemon=True)
                for s in slots]
     for t in threads:
         t.start()
+    on_console_close(lambda: (stop.set(), device.close()))
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))  # e.g. systemd stop on a Pi -> finally below
     log.info("running slots %s on %s", ", ".join(str(s.number) for s in slots), device.url)
     try:
         while any(t.is_alive() for t in threads):
             stop.wait(1)  # short waits keep Ctrl+C responsive on Windows
     except KeyboardInterrupt:
         log.info("stopping")
+    finally:
         stop.set()
+        device.close()

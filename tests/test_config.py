@@ -31,8 +31,9 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(slot.widgets[0].text, "Hello\nWorld")
 
     def test_example_config_loads(self):
-        with self.assertLogs("timesgate", "WARNING"):  # gmail: no token yet
-            cfg = load(Path(__file__).parents[1] / "config.example.toml")
+        example = (Path(__file__).parents[1] / "config.example.toml").read_text(encoding="utf-8")
+        with self.assertLogs("timesgate.gmail", "WARNING"):  # temp dir: no token.json, independent of the repo
+            cfg = self.load(example)
         self.assertEqual([s.number for s in cfg.slots], [1, 2, 3, 4, 5])
         self.assertEqual([w.type for w in cfg.slots[1].widgets], ["gmail", "rates"])
 
@@ -55,6 +56,7 @@ class ConfigTest(unittest.TestCase):
             "unknown section": MINIMAL + "\n[extra]\n",
             "non-empty list": MINIMAL.replace('[{ type = "text" }]', "[]"),
             "unknown level": MINIMAL + '\n[log]\nlevel = "LOUD"\n',
+            "on_exit must be": MINIMAL.replace('ip = "192.168.1.60"', 'ip = "192.168.1.60"\non_exit = 581'),
             "cyrillic_font": MINIMAL.replace("[device]", '[theme]\ncyrillic_font = "no-such.ttf"\n[device]'),
             "text: unknown color": MINIMAL.replace("[device]", '[theme]\ntext = "white2"\n[device]'),
             "muted: ": MINIMAL.replace("[device]", '[theme]\nmuted = 123\n[device]'),

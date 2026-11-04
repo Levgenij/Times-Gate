@@ -22,14 +22,34 @@ class DeviceDown(DeviceError):
 class Device:
     RETRY = 30  # seconds to wait after the device stops answering
 
-    def __init__(self, ip, port=9000, path="/divoom_api", timeout=10, jpeg_quality=90):
+    def __init__(self, ip, port=9000, path="/divoom_api", timeout=10, jpeg_quality=90, on_exit=None):
         ipaddress.IPv4Address(ip)  # ValueError on a typo
+        if on_exit is not None and not (isinstance(on_exit, dict) and isinstance(on_exit.get("Command"), str)):
+            raise ValueError('on_exit must be a command table, e.g. { Command = "Channel/Set5LcdWholeClockId", ClockId = 581 }')
         # Current Times Gate firmware: API on :9000/divoom_api (the reference repo used :80/post).
         self.url = f"http://{ip}:{port}{path}"
-        self.timeout, self.quality = timeout, jpeg_quality
+        self.timeout, self.quality, self.on_exit = timeout, jpeg_quality, on_exit
         self._lock = threading.Lock()  # one upload at a time; frames of an animation must not interleave
         self._last_id = 0
         self.down_until = 0  # 0 = reachable
+        self.closed = False
+        self._exit_sent = False
+
+    def close(self):
+        """Stop all further sends and, if configured, hand the screens back to the device (e.g. its own clock)."""
+        # Set before taking the lock: an upload in progress stops after its current frame instead of
+        # finishing a whole animation, so on_exit fits in the ~5 s Windows gives a closing console.
+        self.closed = True
+        with self._lock:  # so the frame in flight cannot land after on_exit
+            if self._exit_sent:
+                return
+            self._exit_sent = True
+            if self.on_exit:
+                try:
+                    self.command(self.on_exit)
+                    log.info("sent on_exit %s", self.on_exit["Command"])
+                except (requests.RequestException, DeviceError) as e:
+                    log.warning("on_exit failed: %s", e)
 
     def command(self, payload):
         # Plain requests.post on purpose: the reference keeps one request per connection with this device.
@@ -55,6 +75,8 @@ class Device:
             self._last_id = pic_id = max(int(time.time()), self._last_id + 1)
             try:
                 for offset, img in enumerate(frames):
+                    if self.closed:  # shutting down: nothing may land after on_exit
+                        return
                     buf = io.BytesIO()
                     img.save(buf, "JPEG", quality=self.quality)
                     self.command({

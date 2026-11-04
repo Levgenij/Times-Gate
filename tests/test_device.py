@@ -49,6 +49,31 @@ class DeviceTest(unittest.TestCase):
         with self.assertRaises(DeviceError):
             self.dev.send(1, [self.img])
 
+    def test_close_sends_on_exit_once_and_blocks_later_sends(self):
+        clock = {"Command": "Channel/Set5LcdWholeClockId", "ClockId": 581}
+        dev = Device("192.168.1.60", on_exit=clock)
+        with self.assertLogs("timesgate.device", "INFO"):
+            dev.close()
+        dev.close()
+        dev.send(3, [self.img])  # a slot finishing late must not overwrite the device clock
+        self.assertEqual(self.payloads(), [clock])
+
+    def test_close_during_animation_stops_after_current_frame(self):
+        def close_from_another_thread(*args, **kwargs):
+            self.dev.closed = True  # what close() sets before it waits for the lock
+            return ok()
+        self.post.side_effect = close_from_another_thread
+        self.dev.send(3, [self.img, self.img])
+        self.assertEqual(self.post.call_count, 1)  # second frame not sent
+
+    def test_close_without_on_exit_sends_nothing(self):
+        self.dev.close()
+        self.post.assert_not_called()
+
+    def test_bad_on_exit(self):
+        with self.assertRaisesRegex(ValueError, "on_exit"):
+            Device("192.168.1.60", on_exit={"ClockId": 581})
+
     def test_unreachable_backs_off(self):
         self.post.side_effect = requests.ConnectionError("refused")
         with self.assertLogs("timesgate.device", "WARNING"), self.assertRaises(DeviceDown):

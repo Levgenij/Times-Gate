@@ -7,6 +7,10 @@ port = 9000
 path = "/divoom_api"
 timeout = 10               # seconds per request
 jpeg_quality = 90
+# Command sent when timesgate stops (Ctrl+C, console window closed, SIGTERM); default: none.
+# Not sent if the PC loses power, sleeps or crashes. Your device's clock ids:
+#   GET https://app.divoom-gz.com/Channel/Get5LcdInfoV2?DeviceType=LCD&DeviceId=<DeviceId>
+# on_exit = { Command = "Channel/Set5LcdWholeClockId", ClockId = 581 }   # one clock across all 5 screens
 
 [theme]
 background = "#000000"

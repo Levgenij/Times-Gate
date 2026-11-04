@@ -42,7 +42,7 @@ def load(path):
     if unknown:
         raise ConfigError(f"unknown section(s) {', '.join(sorted(unknown))}")
 
-    dev = _section(raw, "device", ["ip", "port", "path", "timeout", "jpeg_quality"])
+    dev = _section(raw, "device", ["ip", "port", "path", "timeout", "jpeg_quality", "on_exit"])
     if "ip" not in dev:
         raise ConfigError("[device]: ip is required")
     try:
