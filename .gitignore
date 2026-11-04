@@ -5,3 +5,7 @@ venv/
 .env
 .vscode/
 .idea/
+config.toml
+out/
+client_secret*.json
+token*.json

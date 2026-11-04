@@ -1,0 +1,101 @@
+# Copy to config.toml (gitignored) and edit. Values below are the defaults unless marked otherwise;
+# any option can be omitted. Secrets (GMAIL_USER, GMAIL_APP_PASSWORD) go to .env, never here.
+
+[device]
+ip = "192.168.1.60"        # required; find it: POST https://app.divoom-gz.com/Device/ReturnSameLANDevice
+port = 9000
+path = "/divoom_api"
+timeout = 10               # seconds per request
+jpeg_quality = 90
+
+[theme]
+background = "#000000"
+text = "#ffffff"
+muted = "#8a8a8a"          # labels
+dim = "#505050"            # footers (update time / date)
+up = "#22c55e"             # chart line when price is up
+down = "#ef4444"
+up_fill = "#0b3d1d"        # area under the chart line
+down_fill = "#4a1212"
+cyrillic_font = "segoeui.ttf"   # any .ttf with Cyrillic; Segoe UI ships with Windows
+
+[log]
+level = "INFO"             # DEBUG also logs every send
+
+# Each [[screen]] is one of the 5 panels (slot 1 = leftmost).
+# Its [[screen.widgets]] are a priority list: the slot shows the first widget that has something to show.
+# Options every widget has:
+#   every  - seconds between runs
+#   retry  - seconds before retrying after a failure (default: every)
+#   align  - run on multiples of `every`, e.g. minute boundaries (default: false)
+
+[[screen]]
+slot = 1
+
+[[screen.widgets]]
+type = "prices"            # Binance last prices, up to 4 rows
+every = 300
+market = "futures"         # "futures" (USDⓈ-M perpetuals) or "spot"; ALCH/SPY/BSB exist only as futures
+quote = "USDT"
+symbols = ["BTC", "ALCH", "SPY", "BSB"]
+
+[[screen]]
+slot = 2
+
+[[screen.widgets]]
+type = "gmail"             # shown only when the unread count grows; otherwise the slot falls through
+every = 60
+host = "imap.gmail.com"
+folder = "INBOX"           # counts unread in all Gmail tabs
+forms = ["непрочитаний", "непрочитані", "непрочитаних"]  # label for 1 / 2-4 / 5+
+
+[[screen.widgets]]
+type = "rates"             # PrivatBank buy / sell to UAH
+every = 18000              # 5 hours
+retry = 300
+currencies = ["USD", "EUR"]  # 1-2
+
+[[screen]]
+slot = 3
+
+[[screen.widgets]]
+type = "clock"
+every = 60
+align = true               # redraw exactly on the minute
+blink = true               # colon blinks (2-frame animation looped by the device)
+date = true
+date_format = "%d.%m"
+weekdays = ["Пон", "Вів", "Сер", "Чет", "П’ят", "Суб", "Нед"]  # Monday first
+time_size = 42
+date_size = 14
+
+[[screen]]
+slot = 4
+
+[[screen.widgets]]
+type = "chart"             # Binance candle closes
+every = 300
+market = "futures"
+symbol = "BTCUSDT"
+interval = "15m"
+candles = 96               # 96 x 15m = 24 h
+title = "BTC 24h"
+
+[[screen]]
+slot = 5
+
+[[screen.widgets]]
+type = "weather"           # Open-Meteo, no API key
+every = 900
+place = "LONDON"
+lat = 51.5074
+lon = -0.1278
+timezone = "Europe/London"
+
+# Also available:
+# [[screen.widgets]]
+# type = "text"
+# every = 3600
+# text = "Hello\nWorld"
+# size = 22
+# cyrillic = false         # true = use theme.cyrillic_font
