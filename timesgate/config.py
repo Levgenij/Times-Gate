@@ -1,6 +1,5 @@
-"""config.toml -> Device + Slots. Secrets come only from .env next to the config, or the environment."""
+"""config.toml -> Device + Slots. Widget files (e.g. the Gmail token) live next to the config."""
 import logging
-import os
 import tomllib
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -19,16 +18,6 @@ class Config:
     device: Device
     slots: list
     level: str
-
-
-def read_env(path):
-    env = {}
-    if path.exists():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if "=" in line and not line.lstrip().startswith("#"):
-                key, value = line.split("=", 1)
-                env[key.strip()] = value.strip().strip("\"'")  # KEY="value" is common in .env files
-    return env
 
 
 def _section(raw, name, allowed):
@@ -76,7 +65,7 @@ def load(path):
     if not isinstance(logging.getLevelName(level), int):
         raise ConfigError(f"[log]: unknown level {level}")
 
-    ctx = SimpleNamespace(theme=theme, secrets={**read_env(path.with_name(".env")), **os.environ})
+    ctx = SimpleNamespace(theme=theme, root=path.resolve().parent)
     slots, seen = [], set()
     screens = raw.get("screen", [])
     if not isinstance(screens, list):

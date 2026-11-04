@@ -1,4 +1,4 @@
-"""python -m timesgate [-c config.toml] [--once] [--preview DIR]"""
+"""python -m timesgate [-c config.toml] [--once | --preview DIR | --gmail-auth]"""
 import argparse
 import logging
 import sys
@@ -16,6 +16,7 @@ def main(argv=None):
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--once", action="store_true", help="draw and send every slot once, then exit")
     mode.add_argument("--preview", metavar="DIR", help="save every slot as PNG into DIR, send nothing")
+    mode.add_argument("--gmail-auth", action="store_true", help="one-time Gmail login in the browser")
     args = p.parse_args(argv)
     # configure before load(): widgets may log while being built; the level comes from the config
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -27,7 +28,15 @@ def main(argv=None):
         sys.exit(f"config error: {e}")
     logging.getLogger().setLevel(cfg.level)
 
-    if args.preview:
+    if args.gmail_auth:
+        gmail = next((w for s in cfg.slots for w in s.widgets if w.type == "gmail"), None)
+        if gmail is None:
+            sys.exit("no gmail widget in the config")
+        try:
+            print(f"saved {gmail.authorize()}; restart timesgate to use it")
+        except ConfigError as e:
+            sys.exit(f"config error: {e}")
+    elif args.preview:
         out = Path(args.preview)
         out.mkdir(parents=True, exist_ok=True)
         for slot in cfg.slots:

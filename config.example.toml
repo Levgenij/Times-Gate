@@ -1,5 +1,5 @@
 # Copy to config.toml (gitignored) and edit. Values below are the defaults unless marked otherwise;
-# any option can be omitted. Secrets (GMAIL_USER, GMAIL_APP_PASSWORD) go to .env, never here.
+# any option can be omitted. No secrets here: the Gmail token lives in token.json (gitignored).
 
 [device]
 ip = "192.168.1.60"        # required; find it: POST https://app.divoom-gz.com/Device/ReturnSameLANDevice
@@ -45,8 +45,9 @@ slot = 2
 [[screen.widgets]]
 type = "gmail"             # shown only when the unread count grows; otherwise the slot falls through
 every = 60
-host = "imap.gmail.com"
-folder = "INBOX"           # counts unread in all Gmail tabs
+label = "INBOX"            # all tabs; "CATEGORY_PERSONAL" = Primary tab only
+client_secret = "client_secret*.json"  # OAuth client (Desktop app), next to this file
+token = "token.json"       # created by: python -m timesgate --gmail-auth
 forms = ["непрочитаний", "непрочитані", "непрочитаних"]  # label for 1 / 2-4 / 5+
 
 [[screen.widgets]]

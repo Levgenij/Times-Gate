@@ -28,7 +28,7 @@ class Widget:
             value = getattr(self, key)
             if value is not None and (not isinstance(value, (int, float)) or value <= 0):
                 raise ConfigError(f"{self.type}: {key} must be a positive number of seconds")
-        self.theme, self.secrets = ctx.theme, ctx.secrets
+        self.theme, self.root = ctx.theme, ctx.root  # root: folder of config.toml, for widget files
         self.log = logging.getLogger(f"timesgate.{self.type}")
         self.http = requests.Session()  # per widget: each widget runs only in its own slot thread
         self.setup()

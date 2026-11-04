@@ -1,7 +1,13 @@
-import imaplib
+from google.auth.exceptions import RefreshError
+from google.auth.transport.requests import AuthorizedSession
+from google.oauth2.credentials import Credentials
 
 from ..render import SIZE, canvas, font
 from .base import ConfigError, Widget
+
+# Labels and their counts only: this token cannot read, send or delete mail.
+SCOPES = ["https://www.googleapis.com/auth/gmail.labels"]
+LABEL_URL = "https://gmail.googleapis.com/gmail/v1/users/me/labels/{}"
 
 
 def decide(prev, count, showing):
@@ -23,37 +29,53 @@ def plural(n, forms):
 
 
 class Gmail(Widget):
-    """Unread count, shown only after new mail arrives; otherwise yields to the next widget in the slot.
+    """Unread count via the Gmail API, shown only after new mail arrives; otherwise yields to the next widget.
 
-    Needs GMAIL_USER and GMAIL_APP_PASSWORD (Google app password) in .env or the environment.
+    One-time setup: `python -m timesgate --gmail-auth` (opens a browser, writes `token`).
     """
     type = "gmail"
-    defaults = {"every": 60, "host": "imap.gmail.com", "folder": "INBOX",
-                "forms": ["непрочитаний", "непрочитані", "непрочитаних"]}  # for 1 / 2-4 / 5+
+    defaults = {
+        "every": 60,
+        "label": "INBOX",                        # CATEGORY_PERSONAL = the "Primary" tab only
+        "client_secret": "client_secret*.json",  # glob, next to config.toml
+        "token": "token.json",                   # written by --gmail-auth, next to config.toml
+        "forms": ["непрочитаний", "непрочитані", "непрочитаних"],  # for 1 / 2-4 / 5+
+    }
 
     def setup(self):
         if len(self.forms) != 3:
             raise ConfigError("gmail: forms needs 3 words, for 1 / 2-4 / 5+ messages")
-        self.user = self.secrets.get("GMAIL_USER")
-        self.password = (self.secrets.get("GMAIL_APP_PASSWORD") or "").replace(" ", "")
-        self.enabled = bool(self.user and self.password)
-        if not self.enabled:
-            self.log.warning("GMAIL_USER / GMAIL_APP_PASSWORD not set (.env), gmail widget disabled")
-        self.prev, self.showing = 0, False
+        self.token_path = self.root / self.token
+        self.prev, self.showing, self.session = 0, False, None
+        if self.token_path.exists():
+            creds = Credentials.from_authorized_user_file(self.token_path, SCOPES)
+            self.session = AuthorizedSession(creds)  # refreshes the hourly access token by itself
+        else:
+            self.log.warning("%s not found, gmail widget disabled; run: python -m timesgate --gmail-auth",
+                             self.token_path.name)
+
+    def authorize(self):
+        """Interactive one-time OAuth consent in the browser; saves the refresh token."""
+        from google_auth_oauthlib.flow import InstalledAppFlow  # only needed here
+        found = sorted(self.root.glob(self.client_secret))
+        if not found:
+            raise ConfigError(f"gmail: no {self.client_secret} next to the config; download the OAuth "
+                              "client (type Desktop app) from Google Cloud Console")
+        creds = InstalledAppFlow.from_client_secrets_file(found[0], SCOPES).run_local_server(port=0)
+        self.token_path.write_text(creds.to_json(), encoding="utf-8")
+        return self.token_path
 
     def unread(self):
-        """Unread messages in the folder (all Gmail tabs). STATUS does not mark anything as read."""
-        with imaplib.IMAP4_SSL(self.host, timeout=20) as imap:
-            try:
-                imap.login(self.user, self.password)
-            except imaplib.IMAP4.error as e:
-                self.enabled = False  # don't retry a bad password every minute and get the account locked
-                raise RuntimeError(f"login failed, gmail disabled until restart: {e}") from e
-            _, data = imap.status(f'"{self.folder}"', "(UNSEEN)")  # quoted: names like "[Gmail]/All Mail"
-        return int(data[0].split(b"UNSEEN")[1].strip(b" )"))
+        try:
+            r = self.session.get(LABEL_URL.format(self.label), timeout=15)
+        except RefreshError as e:
+            self.session = None  # revoked or expired: stop retrying every minute
+            raise RuntimeError(f"token rejected, gmail disabled; run: python -m timesgate --gmail-auth ({e})") from e
+        r.raise_for_status()
+        return r.json()["messagesUnread"]
 
     def frames(self):
-        if not self.enabled:
+        if self.session is None:
             return None
         count = self.unread()
         self.showing, self.prev = decide(self.prev, count, self.showing), count

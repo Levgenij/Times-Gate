@@ -1,7 +1,11 @@
+import json
+import tempfile
 import time
 import unittest
-from unittest.mock import patch
+from pathlib import Path
+from unittest.mock import MagicMock
 
+from google.auth.exceptions import RefreshError
 from PIL import ImageChops
 
 from helpers import ctx
@@ -9,7 +13,7 @@ from timesgate.render import fmt
 from timesgate.widgets import ConfigError
 from timesgate.widgets.chart import BOTTOM, LEFT, RIGHT, TOP, points
 from timesgate.widgets.clock import Clock
-from timesgate.widgets.gmail import Gmail, decide, plural
+from timesgate.widgets.gmail import SCOPES, Gmail, decide, plural
 from timesgate.widgets.prices import Prices
 from timesgate.widgets.rates import parse
 from timesgate.widgets.weather import describe
@@ -75,18 +79,35 @@ class GmailTest(unittest.TestCase):
                         (11, 2), (12, 2), (14, 2), (111, 2), (112, 2)]:
             self.assertEqual(plural(n, forms), forms[want], f"n={n}")
 
-    def test_unread_parses_status_and_quotes_folder(self):
-        g = Gmail(ctx(GMAIL_USER="a@b.c", GMAIL_APP_PASSWORD="pw"), folder="[Gmail]/All Mail")
-        with patch("timesgate.widgets.gmail.imaplib.IMAP4_SSL") as ssl:
-            imap = ssl.return_value.__enter__.return_value
-            imap.status.return_value = ("OK", [b'"[Gmail]/All Mail" (UNSEEN 7)'])
-            self.assertEqual(g.unread(), 7)
-        imap.status.assert_called_once_with('"[Gmail]/All Mail"', "(UNSEEN)")
+    def gmail(self, **opts):
+        with tempfile.TemporaryDirectory() as d, self.assertLogs("timesgate.gmail", "WARNING"):
+            return Gmail(ctx(d), **opts)  # no token.json there: disabled
 
-    def test_disabled_without_credentials_yields(self):
-        with self.assertLogs("timesgate.gmail", "WARNING"):
-            g = Gmail(ctx())
-        self.assertIsNone(g.frames())
+    def test_without_token_yields(self):
+        self.assertIsNone(self.gmail().frames())
+
+    def test_unread_reads_label_count(self):
+        g = self.gmail(label="CATEGORY_PERSONAL")
+        g.session = MagicMock()
+        g.session.get.return_value.json.return_value = {"id": "CATEGORY_PERSONAL", "messagesUnread": 7}
+        self.assertEqual(g.unread(), 7)
+        self.assertTrue(g.session.get.call_args.args[0].endswith("/users/me/labels/CATEGORY_PERSONAL"))
+        self.assertIsNotNone(g.frames())  # 0 -> 7 grew: shown
+
+    def test_rejected_token_disables(self):
+        g = self.gmail()
+        g.session = MagicMock()
+        g.session.get.side_effect = RefreshError("invalid_grant")
+        with self.assertRaisesRegex(RuntimeError, "--gmail-auth"):
+            g.frames()
+        self.assertIsNone(g.frames())  # no more calls to Google
+
+    def test_token_file_is_loaded(self):
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "token.json").write_text(json.dumps({
+                "token": "a", "refresh_token": "r", "client_id": "c", "client_secret": "s",
+                "token_uri": "https://oauth2.googleapis.com/token", "scopes": SCOPES}), encoding="utf-8")
+            self.assertIsNotNone(Gmail(ctx(d)).session)
 
 
 class ClockTest(unittest.TestCase):

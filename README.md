@@ -21,6 +21,7 @@ python -m timesgate
 | `python -m timesgate -c інший.toml` | інший файл конфігурації |
 | `python -m timesgate --once` | малює й надсилає кожен екран один раз і виходить |
 | `python -m timesgate --preview out/` | нічого не надсилає, зберігає PNG кожного екрана в `out/` |
+| `python -m timesgate --gmail-auth` | одноразовий вхід у Gmail через браузер, див. [Gmail](#gmail) |
 
 Програма працює, поки вона запущена. Якщо її зупинити, на екранах залишаться останні надіслані кадри.
 
@@ -73,7 +74,7 @@ currencies = ["USD", "EUR"]
 | `clock` | `blink`, `date`, `date_format` (`%d.%m`), `weekdays` (7 назв), `time_size`, `date_size` | годинник комп'ютера |
 | `chart` | `market`, `symbol` (`BTCUSDT`), `interval` (`15m`), `candles` (96), `title` | Binance `klines` |
 | `weather` | `place`, `lat`, `lon`, `timezone` | [Open-Meteo](https://open-meteo.com), без ключа |
-| `gmail` | `host`, `folder` (`INBOX`), `forms` (підпис для 1 / 2–4 / 5+) | IMAP Gmail |
+| `gmail` | `label` (`INBOX`), `client_secret` (`client_secret*.json`), `token` (`token.json`), `forms` (підпис для 1 / 2–4 / 5+) | Gmail API |
 | `text` | `text`, `size`, `cyrillic` | — |
 
 Деталі роботи віджетів:
@@ -85,26 +86,33 @@ currencies = ["USD", "EUR"]
 
 ### Gmail
 
-Рахуються непрочитані листи в `INBOX` з усіх вкладок, тож число може бути більшим за лічильник «Основні» у вебверсії. Перевірка нічого не позначає прочитаним.
+Кількість непрочитаних береться з Gmail API: `messagesUnread` мітки `label`.
+- `INBOX` рахує всі вкладки, тож число може бути більшим за лічильник «Основні» у вебверсії.
+- `CATEGORY_PERSONAL` рахує лише вкладку «Основні».
 
-1. В акаунті Google має бути ввімкнена двоетапна перевірка.
-2. Створи пароль додатка на <https://myaccount.google.com/apppasswords>.
-3. Створи `.env` поруч із `config.toml` (шаблон: [.env.example](.env.example)):
-   ```
-   GMAIL_USER=you@gmail.com
-   GMAIL_APP_PASSWORD=abcd efgh ijkl mnop
-   ```
+Програма просить дозвіл лише `gmail.labels`: бачити мітки та кількість листів у них. **Читати, надсилати чи видаляти листи цей дозвіл не дає.**
 
-Без `.env` віджет вимикається з попередженням, і слот показує наступний віджет. Якщо пароль неправильний, віджет вимикається до перезапуску, щоб Google не заблокував акаунт за повторні спроби входу.
+**Одноразове налаштування:**
+1. У [Google Cloud Console](https://console.cloud.google.com/):
+   - увімкни **Gmail API**;
+   - створи OAuth client типу **Desktop app** і поклади завантажений `client_secret_….json` поруч із `config.toml`.
+2. На екрані згоди OAuth (OAuth consent screen) переведи застосунок у статус **In production**. Поки він у статусі *Testing*, Google анулює токен через 7 днів, і авторизацію доведеться повторювати. Для особистого використання підтверджувати застосунок у Google не обов'язково: при вході буде попередження «неперевірений застосунок», його можна пропустити.
+3. Запусти `python -m timesgate --gmail-auth`. Відкриється браузер: увійди і дозволь доступ. Токен збережеться в `token.json`.
+4. Перезапусти `python -m timesgate`.
 
-Пароль додатка дає повний доступ до пошти. `.env`, `config.toml` і `client_secret*.json` є в `.gitignore`. Не відкривай `.env` у редакторі, поки працює AI-асистент: розширення передає відкриті файли в розмову.
+Що буде, якщо щось не так:
+- немає `token.json`: віджет вимикається з попередженням, і слот показує наступний віджет;
+- токен відкликано або він застарів: віджет вимикається до перезапуску з підказкою знову запустити `--gmail-auth`;
+- відкликати доступ можна будь-коли на <https://myaccount.google.com/permissions>.
+
+`token.json` і `client_secret*.json` є в `.gitignore`, тож у git не потраплять. Не відкривай їх у редакторі, поки працює AI-асистент: розширення передає відкриті файли в розмову.
 
 ## Як це влаштовано
 
 ```
 timesgate/
   __main__.py   CLI
-  config.py     config.toml + .env -> Device і слоти, перевірка
+  config.py     config.toml -> Device і слоти, перевірка
   device.py     надсилання на пристрій
   runner.py     потік на кожен слот, розклад, пріоритети, пропуск однакових кадрів
   render.py     тема, кеш шрифтів, полотно 128×128, формат цін

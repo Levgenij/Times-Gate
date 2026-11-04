@@ -16,12 +16,10 @@ widgets = [{ type = "text" }]
 
 
 class ConfigTest(unittest.TestCase):
-    def load(self, text, env=None):
+    def load(self, text):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "config.toml"
             path.write_text(text, encoding="utf-8")
-            if env is not None:
-                (Path(d) / ".env").write_text(env, encoding="utf-8")
             return load(path)
 
     def test_minimal_uses_defaults(self):
@@ -33,15 +31,17 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(slot.widgets[0].text, "Hello\nWorld")
 
     def test_example_config_loads(self):
-        cfg = load(Path(__file__).parents[1] / "config.example.toml")
+        with self.assertLogs("timesgate", "WARNING"):  # gmail: no token yet
+            cfg = load(Path(__file__).parents[1] / "config.example.toml")
         self.assertEqual([s.number for s in cfg.slots], [1, 2, 3, 4, 5])
         self.assertEqual([w.type for w in cfg.slots[1].widgets], ["gmail", "rates"])
 
-    def test_env_secrets_reach_widget(self):
-        cfg = self.load(MINIMAL.replace('"text"', '"gmail"'), env='GMAIL_USER=a@b.c\nGMAIL_APP_PASSWORD="ab cd"\n')
+    def test_widget_files_resolve_next_to_config(self):
+        with self.assertLogs("timesgate.gmail", "WARNING"):
+            cfg = self.load(MINIMAL.replace('"text"', '"gmail"'))
         g = cfg.slots[0].widgets[0]
-        self.assertTrue(g.enabled)
-        self.assertEqual(g.password, "abcd")  # quotes and spaces stripped
+        self.assertEqual(g.token_path.name, "token.json")
+        self.assertEqual(g.token_path.parent, g.root)
 
     def test_errors(self):
         cases = {
