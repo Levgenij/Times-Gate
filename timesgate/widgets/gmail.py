@@ -52,6 +52,12 @@ class Gmail(GoogleWidget):
         t = self.theme
         img, d = canvas(t)
         small = font(13, t.cyrillic_font)
+        if not rows:  # unread mail only outside INBOX and your labels: just the big number
+            d.text((SIZE // 2, 16), "Gmail", fill=t.muted, font=font(13), anchor="mm")
+            text = str(total)  # 4 digits fit at 52 px; 5 (10000+) would be clipped
+            d.text((SIZE // 2, 62), text, fill=t.text, font=font(52 if len(text) <= 4 else 36), anchor="mm")
+            d.text((SIZE // 2, 106), self.words["total"], fill=t.muted, font=font(14, t.cyrillic_font), anchor="mm")
+            return img
         d.text((6, 15), self.words["total"], fill=t.muted, font=small, anchor="lm")
         d.text((SIZE - 6, 15), str(total), fill=t.text, font=font(24), anchor="rm")
         d.line([(6, 31), (SIZE - 6, 31)], fill=t.dim)

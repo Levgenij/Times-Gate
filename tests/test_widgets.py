@@ -137,6 +137,18 @@ class GmailTest(unittest.TestCase):
         (img,) = g.frames()  # total UNREAD 0 -> 9 grew: shown
         self.assertEqual(img.size, (128, 128))
 
+    def test_no_label_rows_shows_big_number(self):
+        g = self.gmail()
+        line = (60, 31)  # the divider under Total, drawn only above label rows
+        self.assertNotEqual(g.render(3, [("Work", 3)]).getpixel(line), (0, 0, 0))
+        big = g.render(3, [])
+        self.assertEqual(big.getpixel(line), (0, 0, 0))
+        _, top_y, _, bottom_y = ImageChops.difference(big, g.render(4, [])).getbbox()
+        self.assertGreater(bottom_y - top_y, 30)  # only the number changed, and it is tall
+        left, _, right, _ = g.render(18888, []).getbbox()
+        self.assertGreater(left, 0)  # 5 digits get a smaller font instead of being clipped
+        self.assertLess(right, 128)
+
     def gmail(self, **opts):
         with tempfile.TemporaryDirectory() as d, self.assertLogs("timesgate.gmail", "WARNING"):
             return Gmail(ctx(d), **opts)  # no token there: disabled
