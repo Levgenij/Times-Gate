@@ -2,18 +2,22 @@ import json
 import tempfile
 import time
 import unittest
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 
 from google.auth.exceptions import RefreshError
-from PIL import ImageChops
+from PIL import ImageChops, ImageColor
 
 from helpers import ctx
-from timesgate.render import fmt
+from timesgate.render import fit, fmt, font
 from timesgate.widgets import ConfigError
+from timesgate.widgets import gcalendar
+from timesgate.widgets.gcalendar import ROW, Calendar, Item, when
 from timesgate.widgets.chart import BOTTOM, LEFT, RIGHT, TOP, points
 from timesgate.widgets.clock import Clock
 from timesgate.widgets.gmail import SCOPES, Gmail, decide, plural
+from timesgate.widgets.google import google_error
 from timesgate.widgets.prices import Prices
 from timesgate.widgets.rates import parse
 from timesgate.widgets import icons
@@ -135,7 +139,7 @@ class GmailTest(unittest.TestCase):
         g = self.gmail()
         g.session = MagicMock()
         g.session.get.side_effect = RefreshError("invalid_grant")
-        with self.assertRaisesRegex(RuntimeError, "--gmail-auth"):
+        with self.assertRaisesRegex(RuntimeError, "--google-auth"):
             g.frames()
         self.assertIsNone(g.frames())  # no more calls to Google
 
@@ -145,6 +149,182 @@ class GmailTest(unittest.TestCase):
                 "token": "a", "refresh_token": "r", "client_id": "c", "client_secret": "s",
                 "token_uri": "https://oauth2.googleapis.com/token", "scopes": SCOPES}), encoding="utf-8")
             self.assertIsNotNone(Gmail(ctx(d)).session)
+
+
+class CalendarTest(unittest.TestCase):
+    NOW = datetime(2026, 11, 5, 12, 0).astimezone()  # Thursday noon, local time
+
+    def test_parse(self):
+        events = gcalendar.parse([
+            {"summary": "Дзвінок", "start": {"dateTime": "2026-11-05T10:00:00Z"}, "end": {"dateTime": "2026-11-05T11:00:00Z"}},
+            {"summary": "Відхилено", "start": {"dateTime": "2026-11-05T13:00:00+02:00"},
+             "end": {"dateTime": "2026-11-05T14:00:00+02:00"},
+             "attendees": [{"self": True, "responseStatus": "declined"}]},
+            {"start": {"date": "2026-11-06"}, "end": {"date": "2026-11-07"}},
+        ])
+        self.assertEqual(len(events), 2)  # the declined one is skipped
+        start, end, title, all_day, task = events[0]
+        self.assertEqual(start, datetime(2026, 11, 5, 10, 0, tzinfo=timezone.utc))
+        self.assertEqual(start.utcoffset(), self.NOW.utcoffset())  # shown in the PC's zone
+        self.assertEqual((title, all_day, task), ("Дзвінок", False, False))
+        self.assertEqual(events[1], Item(date(2026, 11, 6), date(2026, 11, 7), "(без назви)", True))
+
+    def test_parse_tasks(self):
+        tasks = gcalendar.parse_tasks([
+            {"title": "Оплатити інтернет", "status": "needsAction", "due": "2026-11-06T00:00:00.000Z"},
+            {"title": "Без дати", "status": "needsAction"},
+            {"title": "Здати звіт", "status": "completed", "due": "2026-11-05T00:00:00.000Z",
+             "completed": "2026-11-05T09:15:00.000Z"},
+        ])
+        self.assertEqual(tasks, [Item(date(2026, 11, 6), date(2026, 11, 7), "Оплатити інтернет", True, True),
+                                 Item(None, None, "Без дати", True, True)])  # the completed one is not shown
+
+    def test_when(self):
+        now, h, today, day = self.NOW, timedelta(hours=1), self.NOW.date(), timedelta(days=1)
+        ev = lambda s, e, all_day=False: when(Item(s, e, "x", all_day), now)  # noqa: E731
+        self.assertEqual(ev(now - h, now + h), f"Зараз · до {now + h:%H:%M}")
+        self.assertEqual(ev(now + 2 * h, now + 3 * h), f"Сьогодні {now + 2 * h:%H:%M}")
+        self.assertEqual(ev(now + day, now + day + h), "Завтра 12:00")
+        self.assertEqual(ev(now + 3 * day, now + 3 * day + h), "Нед 08.11 12:00")
+        self.assertEqual(ev(today, today + day, True), "Сьогодні · весь день")
+        self.assertEqual(ev(today + day, today + 2 * day, True), "Завтра · весь день")
+        self.assertEqual(ev(today + 2 * day, today + 3 * day, True), "Суб 07.11")
+        task = lambda due: when(Item(due, due and due + day, "x", True, True), now)  # noqa: E731
+        self.assertEqual(task(today), "Сьогодні · завдання")
+        self.assertEqual(task(today + day), "Завтра · завдання")
+        self.assertEqual(task(today - 2 * day), "Прострочено · 03.11")
+        self.assertEqual(task(None), "Завдання")
+
+    def test_pick_finished_above_coming(self):
+        now, h = self.NOW, timedelta(hours=1)
+        ev = lambda a, b: Item(now + a * h, now + b * h, f"{a}", False)  # noqa: E731
+        early, late, live, soon, later, tomorrow = ev(-5, -4), ev(-3, -2), ev(-1, 1), ev(2, 3), ev(4, 5), ev(24, 25)
+        allday = Item(now.date(), now.date() + timedelta(days=1), "allday", True)  # today, all day: still on
+        events = [early, late, allday, live, soon, later, tomorrow]
+        self.assertEqual(gcalendar.pick(events, now, 4, 1), ([late], [allday, live, soon]))  # the latest finished one
+        self.assertEqual(gcalendar.pick(events, now, 4, 0), ([], [allday, live, soon, later]))
+        self.assertEqual(gcalendar.pick([early, late, soon], now, 4, 1), ([early, late], [soon]))  # few coming: more past
+        self.assertEqual(gcalendar.pick([early], now, 4, 1), ([early], []))
+        self.assertEqual(gcalendar.pick([], now, 4, 1), ([], []))
+
+    def test_tasks_mix_in_order(self):
+        now, h, today = self.NOW, timedelta(hours=1), self.NOW.date()
+        overdue = Item(today - timedelta(days=2), today - timedelta(days=1), "overdue", True, True)
+        meeting = Item(now - 5 * h, now - 4 * h, "meeting", False)  # 07:00-08:00, finished
+        due_tomorrow = Item(today + timedelta(days=1), today + timedelta(days=2), "tomorrow", True, True)
+        soon = Item(now + h, now + 2 * h, "soon", False)
+        undated_a, undated_b = Item(None, None, "a", True, True), Item(None, None, "b", True, True)
+        items = sorted([undated_a, due_tomorrow, soon, undated_b, meeting, overdue], key=gcalendar.order)
+        # an overdue task stays "coming" (first); tasks without a date last, in their Google Tasks order
+        self.assertEqual(items, [overdue, meeting, soon, due_tomorrow, undated_a, undated_b])
+        self.assertEqual(gcalendar.pick(items, now, 4, 1), ([meeting], [overdue, soon, due_tomorrow]))
+
+    def test_render_marks_now_line(self):
+        now, h = self.NOW, timedelta(hours=1)
+        c = Calendar(ctx())
+        img = c.render([Item(now - 2 * h, now - h, "Минула", False)],
+                       [Item(now.date(), now.date() + timedelta(days=1), "Завдання", True, True)], now)
+        self.assertEqual(img.getpixel((60, ROW - 1)), ImageColor.getrgb(c.theme.down))  # red "now" line under row 1
+        self.assertEqual(img.getpixel((6, ROW + 19)), ImageColor.getrgb(c.theme.muted))  # task checkbox, left edge
+
+    def calendar(self, items, tasks=(), denied=None):
+        with tempfile.TemporaryDirectory() as d, self.assertLogs("timesgate.calendar", "WARNING"):
+            c = Calendar(ctx(d))  # no token there: disabled
+        self.assertIsNone(c.frames())  # no token: the slot falls through to the next widget
+        c.session = MagicMock()
+
+        def get(url, **_):  # events for the calendar URL, `tasks` (or Google's error body `denied`) for the Tasks URL
+            r = MagicMock(ok=True, status_code=200)
+            r.json.return_value = {"items": items if "/calendars/" in url else tasks}
+            if denied and "/tasks" in url:
+                r.ok, r.status_code, r.json.return_value = False, 403, denied
+            return r
+        c.session.get.side_effect = get
+        return c
+
+    def test_frames(self):
+        item = {"summary": "Дуже довга назва зустрічі, що не влазить у рядок", "start": {"dateTime": "2026-11-05T10:00:00Z"},
+                "end": {"dateTime": "2099-11-05T11:00:00Z"}}
+        c = self.calendar([item] * 5)
+        (img,) = c.frames()
+        self.assertEqual(img.size, (128, 128))
+        events_call, open_call = c.session.get.call_args_list  # completed tasks are not requested
+        self.assertTrue(events_call.args[0].endswith("/calendars/primary/events"))
+        self.assertEqual((events_call.kwargs["params"]["singleEvents"], events_call.kwargs["params"]["orderBy"]),
+                         ("true", "startTime"))
+        self.assertTrue(open_call.args[0].endswith("/lists/%40default/tasks"))
+        self.assertEqual(open_call.kwargs["params"]["showCompleted"], "false")
+        self.assertNotIn("dueMax", open_call.kwargs["params"])  # it would drop the tasks without a date
+
+    def test_tasks_off_and_scopes(self):
+        self.assertEqual(Calendar(ctx()).scopes, [gcalendar.EVENTS_SCOPE, gcalendar.TASKS_SCOPE])
+        c = self.calendar([])
+        c.tasks = False
+        c.frames()
+        self.assertEqual(c.session.get.call_count, 1)  # events only
+        self.assertEqual(Calendar(ctx(), tasks=False).scopes, [gcalendar.EVENTS_SCOPE])
+
+    def test_google_reason_is_shown(self):
+        disabled = {"error": {"code": 403, "message": "Google Tasks API has not been used in project 1 before or it is "
+                              "disabled. Enable it by visiting https://console.developers.google.com/apis/api/x",
+                              "details": [{"@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                                           "reason": "SERVICE_DISABLED"}]}}
+        with self.assertRaisesRegex(RuntimeError, r"HTTP 403 SERVICE_DISABLED: Google Tasks API .* Enable it"):
+            self.calendar([], denied=disabled).frames()
+
+    def test_google_error_text(self):
+        def resp(status, body):
+            r = MagicMock(status_code=status)
+            r.json.side_effect = body if isinstance(body, Exception) else None
+            r.json.return_value = body
+            return r
+        scope = {"error": {"message": "Request had insufficient authentication scopes.",
+                           "errors": [{"reason": "insufficientPermissions"}]}}
+        self.assertIn("--google-auth", google_error(resp(403, scope)))  # missing permission: sign in again
+        self.assertEqual(google_error(resp(500, ValueError("not json"))), "HTTP 500")
+
+    def test_tasks_read_every_page(self):
+        c = self.calendar([])
+        pages = {None: {"items": [{"title": "1", "status": "needsAction"}], "nextPageToken": "p2"},
+                 "p2": {"items": [{"title": "2", "status": "needsAction"}]}}
+
+        def get(url, params, **_):
+            r = MagicMock()
+            r.json.return_value = pages[params.get("pageToken")]
+            return r
+        c.session.get.side_effect = get
+        tasks = c.fetch_tasks(self.NOW + timedelta(days=7))
+        self.assertEqual([t.title for t in tasks], ["1", "2"])  # the 2nd page is not lost
+
+    def test_undated_tasks_kept_far_ones_dropped(self):
+        c = self.calendar([], tasks=[{"title": "Колись", "status": "needsAction"},
+                                     {"title": "Далеко", "status": "needsAction", "due": "2099-01-01T00:00:00.000Z"}])
+        tasks = c.fetch_tasks(self.NOW + timedelta(days=7))
+        self.assertEqual([t.title for t in tasks], ["Колись"])  # due beyond `days`: dropped; no date: kept
+        self.assertIsNotNone(c.frames())  # an undated task alone still counts as coming
+
+    def test_no_events_falls_through(self):
+        self.assertIsNone(self.calendar([]).frames())
+        finished = {"summary": "Стендап", "start": {"dateTime": "2000-01-01T09:00:00Z"},
+                    "end": {"dateTime": "2000-01-01T10:00:00Z"}}
+        self.assertIsNone(self.calendar([finished]).frames())  # only finished ones: nothing coming -> next widget
+
+    def test_bad_options(self):
+        with self.assertRaises(ConfigError):
+            Calendar(ctx(), count=5)
+        with self.assertRaises(ConfigError):
+            Calendar(ctx(), days=0)
+        with self.assertRaises(ConfigError):
+            Calendar(ctx(), count=2, past=2)  # no row left for coming events
+
+
+class FitTest(unittest.TestCase):
+    def test_cuts_with_ellipsis(self):
+        f = font(13)
+        self.assertEqual(fit("short", f, 116), "short")
+        cut = fit("a very long event title that does not fit", f, 60)
+        self.assertTrue(cut.endswith("…"))
+        self.assertLessEqual(f.getlength(cut), 60)
 
 
 class ClockTest(unittest.TestCase):

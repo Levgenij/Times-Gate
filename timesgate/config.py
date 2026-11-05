@@ -13,7 +13,7 @@ from PIL import ImageColor, ImageFont
 from .device import Device
 from .render import Theme
 from .runner import Slot
-from .widgets import REGISTRY, ConfigError
+from .widgets import REGISTRY, ConfigError, GoogleWidget
 
 # Project root, not the current folder: autostart launches with cwd = System32.
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / "config.toml"
@@ -38,9 +38,14 @@ def _section(raw, name, allowed):
     return section
 
 
-def find_widget(cfg, kind):
-    """First widget of this type on any screen, or None."""
-    return next((w for s in cfg.slots for w in s.widgets if w.type == kind), None)
+def google_widgets(cfg):
+    """One Google widget per token file (gmail, calendar, a second calendar with its own token...): one sign-in each."""
+    found = {}
+    for s in cfg.slots:
+        for w in s.widgets:
+            if isinstance(w, GoogleWidget):
+                found.setdefault(w.token_path, w)
+    return list(found.values())
 
 
 def read(path):

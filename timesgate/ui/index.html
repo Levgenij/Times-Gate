@@ -385,12 +385,14 @@ textarea { resize: vertical; }
         <span v-else class="switch"><input type="checkbox" :checked="autostart" @change="setAutostart($event.target.checked)"
               aria-label="Автозапуск"><i></i></span>
       </div>
-      <div class="row">
-        <div class="grow"><b>Gmail</b>
-          <span class="hint">{{ !status?.gmail ? 'Віджет Gmail не додано на жоден екран.'
-            : status.gmail.active ? 'Підключено: лічильник оновлюється.' : status.gmail.authorized ? 'Токен є, але не працює — увійдіть ще раз.'
-            : 'Не підключено. Потрібен client_secret*.json поруч із config.toml.' }}</span></div>
-        <button class="btn" :disabled="!status?.gmail" @click="gmailAuth">{{ status?.gmail?.authorized ? 'Увійти знову' : 'Увійти в Gmail' }}</button>
+      <div v-for="(g, token) in status?.google" :key="token" class="row">
+        <div class="grow"><b>Google: {{ g.label }}</b> <span class="mono hint">{{ token }}</span>
+          <span class="hint">{{ g.active ? 'Підключено.' : g.authorized ? 'Токен є, але не працює — увійдіть ще раз.'
+            : 'Не підключено. Потрібен client_secret*.json поруч із config.toml і увімкнений API в Google Cloud.' }}</span></div>
+        <button class="btn" @click="googleAuth(token)">{{ g.authorized ? 'Увійти знову' : 'Увійти' }}</button>
+      </div>
+      <div v-if="status && !Object.keys(status.google).length" class="row">
+        <div class="grow"><b>Google</b><span class="hint">Віджетів Gmail чи Календаря немає на жодному екрані.</span></div>
       </div>
       <div class="row">
         <div class="grow" style="max-width: 520px"><div class="fields">
@@ -669,8 +671,8 @@ createApp({
         flash(on ? 'Автозапуск увімкнено' : 'Автозапуск вимкнено')
       } catch (e) { error.value = e.message; loadAutostart() }
     }
-    async function gmailAuth() {
-      try { await api('POST', '/api/gmail-auth', {}); flash('Відкрився браузер — увійдіть у Google і дозвольте доступ') }
+    async function googleAuth(token) {
+      try { await api('POST', '/api/google-auth', { token }); flash('Відкрився браузер — увійдіть у Google і дозвольте доступ') }
       catch (e) { error.value = e.message }
     }
     const logClass = l => / (WARNING) /.test(l) ? 'w' : / (ERROR|CRITICAL) /.test(l) ? 'e' : / DEBUG /.test(l) ? 'd' : ''
@@ -687,7 +689,7 @@ createApp({
     return { schema, draft, path, status, alive, tab, tabs, sel, themeSlot, error, toast, saving, picking, autostart, logs, logBox,
              dragFrom, dragOver, preview, dirty, label, widgetsOf, configured, live, chain, errorsText, keyOf, isOpen, toggle,
              own, sched, summary, ago, add, remove, move, drop, deviceOpts, themeOpts, levelOpt, portOpt, exitModes, exitMode,
-             exitText, exitError, setExitMode, setExitText, runPreview, save, revert, setAutostart, gmailAuth, logClass }
+             exitText, exitError, setExitMode, setExitText, runPreview, save, revert, setAutostart, googleAuth, logClass }
   },
 }).mount('#app')
 </script>

@@ -97,9 +97,11 @@ def _errors(slot):
     return {w.type: e for w, e in zip(slot.widgets, slot.errors) if e}
 
 
-def _gmail(cfg):
-    w = config.find_widget(cfg, "gmail")
-    return w and {"authorized": w.token_path.exists(), "active": w.session is not None}
+def _google(cfg):
+    """Sign-in state per Google token file, for the "Система" tab."""
+    # type(w).label: the instance attribute may be an option of the same name (gmail's `label` = "INBOX")
+    return {w.token: {"label": type(w).label, "authorized": w.token_path.exists(), "active": w.session is not None}
+            for w in config.google_widgets(cfg)}
 
 
 def make_server(runner, path, port):
@@ -187,7 +189,7 @@ def make_server(runner, path, port):
                 "device": {"online": cfg.device.down_until == 0, "url": cfg.device.url},
                 "slots": [{"slot": s.number, "widget": s.sent and s.sent[0], "sent_at": s.sent and s.sent[2],
                            "errors": _errors(s)} for s in cfg.slots],
-                "gmail": _gmail(cfg)})
+                "google": _google(cfg)})
 
         def get_screen(self, url):  # /api/screen/3.png: what the device shows on slot 3
             n = int(url.rsplit("/", 1)[-1].split(".")[0])
@@ -205,19 +207,20 @@ def make_server(runner, path, port):
         def get_log(self, url):
             self.reply(200, {"lines": list(LOG.lines)})
 
-        def post_gmail_auth(self, url):
-            gmail = config.find_widget(runner.cfg, "gmail")
-            if gmail is None:
-                raise ConfigError("no gmail widget in the config")
+        def post_google_auth(self, url):  # body {"token": "token_calendar.json"}
+            token = (self.body() or {}).get("token")
+            widget = next((w for w in config.google_widgets(runner.cfg) if w.token == token), None)
+            if widget is None:
+                raise ConfigError(f"no Google widget with token {token!r} in the config")
 
             def login():  # blocks until the browser consent finishes
                 try:
-                    log.info("gmail: saved %s", gmail.authorize())
+                    log.info("%s: saved %s", widget.type, widget.authorize())
                     runner.reload(config.load(path))
                 except Exception as e:
-                    log.warning("gmail login failed: %s", e)
+                    log.warning("%s sign-in failed: %s", widget.type, e)
 
-            threading.Thread(target=login, name="gmail-auth", daemon=True).start()
+            threading.Thread(target=login, name="google-auth", daemon=True).start()
             self.reply(202, {"started": True})
 
     return Server(("127.0.0.1", port), Handler)

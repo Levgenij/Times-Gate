@@ -43,6 +43,18 @@ port = 8765                # http://127.0.0.1:8765, this PC only; change takes e
 slot = 1
 
 [[screen.widgets]]
+type = "calendar"          # next Google Calendar events and tasks; nothing coming within `days` -> prices below
+every = 300
+calendar = "primary"       # or another calendar id from Google Calendar settings
+tasks = true               # also Google Tasks; undated ones go last (needs the Google Tasks API enabled)
+tasklist = "@default"      # "My Tasks"
+days = 7
+count = 4                  # 1-4 rows
+past = 1                   # today's finished events kept on top in grey, above a red "now" line (0 to count-1)
+client_secret = "client_secret*.json"  # the same OAuth client as gmail
+token = "token_calendar.json"          # its own token, read-only events (+ tasks); created by "sign in"
+
+[[screen.widgets]]
 type = "prices"            # Binance last prices, up to 4 rows
 every = 300
 market = "futures"         # "futures" (USDⓈ-M perpetuals) or "spot"; ALCH/SPY/BSB exist only as futures
@@ -57,7 +69,7 @@ type = "gmail"             # shown only when the unread count grows; otherwise t
 every = 60
 label = "INBOX"            # all tabs; "CATEGORY_PERSONAL" = Primary tab only
 client_secret = "client_secret*.json"  # OAuth client (Desktop app), next to this file
-token = "token.json"       # created by: python -m timesgate --gmail-auth
+token = "token.json"       # created by "sign in" (settings -> Система) or python -m timesgate --google-auth
 forms = ["непрочитаний", "непрочитані", "непрочитаних"]  # label for 1 / 2-4 / 5+
 
 [[screen.widgets]]

@@ -1,4 +1,4 @@
-"""python -m timesgate [-c config.toml] [--once | --preview DIR | --gmail-auth]"""
+"""python -m timesgate [-c config.toml] [--once | --preview DIR | --google-auth]"""
 import argparse
 import logging
 import sys
@@ -10,7 +10,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from . import runner, tray, web
-from .config import DEFAULT_PATH, find_widget, load
+from .config import DEFAULT_PATH, google_widgets, load
 from .widgets import ConfigError
 
 
@@ -29,7 +29,8 @@ def main(argv=None):
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--once", action="store_true", help="draw and send every slot once, then exit")
     mode.add_argument("--preview", metavar="DIR", help="save every slot as PNG into DIR, send nothing")
-    mode.add_argument("--gmail-auth", action="store_true", help="one-time Gmail login in the browser")
+    mode.add_argument("--google-auth", action="store_true",
+                      help="one-time Google login in the browser for each gmail / calendar widget")
     args = p.parse_args(argv)
     # configure before load(): widgets may log while being built; the level comes from the config
     handlers = [web.LOG]  # last lines for the settings page
@@ -47,14 +48,17 @@ def main(argv=None):
         fail(f"config error: {e}")
     logging.getLogger().setLevel(cfg.level)
 
-    if args.gmail_auth:
-        gmail = find_widget(cfg, "gmail")
-        if gmail is None:
-            sys.exit("no gmail widget in the config")
-        try:
-            print(f"saved {gmail.authorize()}; restart timesgate to use it")
-        except ConfigError as e:
-            sys.exit(f"config error: {e}")
+    if args.google_auth:
+        widgets = google_widgets(cfg)
+        if not widgets:
+            sys.exit("no Google widget (gmail, calendar) in the config")
+        for w in widgets:  # one browser consent per widget: each token has only its own scope
+            print(f"{w.type} ({w.token}): sign in in the browser…")
+            try:
+                print(f"saved {w.authorize()}")
+            except ConfigError as e:
+                sys.exit(f"config error: {e}")
+        print("restart timesgate (or tray -> Оновити екрани) to use it")
     elif args.preview:
         out = Path(args.preview)
         out.mkdir(parents=True, exist_ok=True)

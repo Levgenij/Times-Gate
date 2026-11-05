@@ -38,6 +38,15 @@ def canvas(theme):
     return img, ImageDraw.Draw(img)
 
 
+def fit(text, f, width):
+    """`text` cut to at most `width` pixels in font `f`, ending with "…" when cut."""
+    if f.getlength(text) <= width:
+        return text
+    while text and f.getlength(text + "…") > width:
+        text = text[:-1]
+    return text.rstrip() + "…"
+
+
 def fmt(price):
     """Price with precision that fits the screen: 79,920 / 767.50 / 0.0382."""
     if price is None:

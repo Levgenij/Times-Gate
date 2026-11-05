@@ -65,6 +65,20 @@ class WebTest(unittest.TestCase):
         self.assertTrue(self.path.with_suffix(".toml.bak").exists())
         self.runner.reload.assert_called_once()
 
+    def test_status_lists_google_widgets(self):
+        widgets = ('[{ type = "calendar" }, { type = "gmail" }, { type = "calendar", token = "token_work.json" },'
+                   ' { type = "calendar" }]')
+        self.path.write_text(MINIMAL.replace('[{ type = "text" }]', widgets), encoding="utf-8")
+        with self.assertLogs(level="WARNING"):  # no tokens in the temp dir
+            self.runner.cfg = config.load(self.path)
+        code, body = self.call("GET", "/api/status")
+        off = {"authorized": False, "active": False}
+        self.assertEqual(body["google"], {  # one sign-in per token file; the 2nd default calendar shares the 1st
+            "token_calendar.json": {"label": "Календар", **off},
+            "token.json": {"label": "Gmail", **off},  # not its `label` option, "INBOX"
+            "token_work.json": {"label": "Календар", **off}})
+        self.assertEqual(self.call("POST", "/api/google-auth", {"token": "nope.json"})[0], 400)
+
     def test_other_sites_are_refused(self):
         self.assertEqual(self.call("GET", "/api/status", headers={"Host": "evil.example"})[0], 403)
         req = urllib.request.Request(self.base + "/api/config", b"{}", {"Content-Type": "text/plain"}, method="PUT")

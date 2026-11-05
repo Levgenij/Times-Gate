@@ -1,14 +1,10 @@
-from google.auth.exceptions import RefreshError
-from google.auth.transport.requests import AuthorizedSession
-from google.oauth2.credentials import Credentials
-
 from ..render import SIZE, canvas, font
-from .base import ConfigError, Widget
+from .base import ConfigError
+from .google import GoogleWidget
 
 # Labels and their counts only: this token cannot read, send or delete mail.
 SCOPES = ["https://www.googleapis.com/auth/gmail.labels"]
 LABEL_URL = "https://gmail.googleapis.com/gmail/v1/users/me/labels/{}"
-_warned = set()  # token paths already reported missing
 
 
 def decide(prev, count, showing):
@@ -29,57 +25,29 @@ def plural(n, forms):
     return forms[2]
 
 
-class Gmail(Widget):
-    """Unread count via the Gmail API, shown only after new mail arrives; otherwise yields to the next widget.
-
-    One-time setup: `python -m timesgate --gmail-auth` (opens a browser, writes `token`).
-    """
+class Gmail(GoogleWidget):
+    """Unread count via the Gmail API, shown only after new mail arrives; otherwise yields to the next widget."""
     type = "gmail"
+    scopes = SCOPES
     defaults = {
         "every": 60,
         "label": "INBOX",                        # CATEGORY_PERSONAL = the "Primary" tab only
         "client_secret": "client_secret*.json",  # glob, next to config.toml
-        "token": "token.json",                   # written by --gmail-auth, next to config.toml
+        "token": "token.json",                   # written by "sign in", next to config.toml
         "forms": ["непрочитаний", "непрочитані", "непрочитаних"],  # for 1 / 2-4 / 5+
     }
     label, about = "Gmail", "Кількість непрочитаних; показується, лише коли їх стало більше"
-    help = {"label": "INBOX — усі вкладки, CATEGORY_PERSONAL — лише «Основні»",
-            "client_secret": "OAuth-клієнт (Desktop app) поруч із config.toml, можна маску",
-            "token": "Створюється кнопкою «Увійти в Gmail»",
+    help = {**GoogleWidget.help, "label": "INBOX — усі вкладки, CATEGORY_PERSONAL — лише «Основні»",
             "forms": "Слово для 1 / 2–4 / 5+ листів"}
 
     def setup(self):
         if len(self.forms) != 3:
             raise ConfigError("gmail: forms needs 3 words, for 1 / 2-4 / 5+ messages")
-        self.token_path = self.root / self.token
-        self.prev, self.showing, self.session = 0, False, None
-        if self.token_path.exists():
-            creds = Credentials.from_authorized_user_file(self.token_path, SCOPES)
-            self.session = AuthorizedSession(creds)  # refreshes the hourly access token by itself
-        elif self.token_path not in _warned:  # once: every preview in the settings UI builds a new widget
-            _warned.add(self.token_path)
-            self.log.warning("%s not found, gmail widget disabled; run: python -m timesgate --gmail-auth",
-                             self.token_path.name)
-
-    def authorize(self):
-        """Interactive one-time OAuth consent in the browser; saves the refresh token."""
-        from google_auth_oauthlib.flow import InstalledAppFlow  # only needed here
-        found = sorted(self.root.glob(self.client_secret))
-        if not found:
-            raise ConfigError(f"gmail: no {self.client_secret} next to the config; download the OAuth "
-                              "client (type Desktop app) from Google Cloud Console")
-        creds = InstalledAppFlow.from_client_secrets_file(found[0], SCOPES).run_local_server(port=0)
-        self.token_path.write_text(creds.to_json(), encoding="utf-8")
-        return self.token_path
+        self.prev, self.showing = 0, False
+        super().setup()
 
     def unread(self):
-        try:
-            r = self.session.get(LABEL_URL.format(self.label), timeout=15)
-        except RefreshError as e:
-            self.session = None  # revoked or expired: stop retrying every minute
-            raise RuntimeError(f"token rejected, gmail disabled; run: python -m timesgate --gmail-auth ({e})") from e
-        r.raise_for_status()
-        return r.json()["messagesUnread"]
+        return self.api_json(LABEL_URL.format(self.label))["messagesUnread"]
 
     def frames(self):
         if self.session is None:
