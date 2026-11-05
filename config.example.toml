@@ -66,12 +66,11 @@ symbols = ["BTC", "ALCH", "SPY", "BSB"]
 slot = 2
 
 [[screen.widgets]]
-type = "gmail"             # shown only when the unread count grows; otherwise the slot falls through
+type = "gmail"             # total unread + up to 4 labels (INBOX, your own); shown only when the total grows
 every = 60
-label = "INBOX"            # all tabs; "CATEGORY_PERSONAL" = Primary tab only
+label = "UNREAD"           # what Total counts: UNREAD = all unread mail, INBOX = the inbox only
 client_secret = "secrets/client_secret*.json"  # OAuth client (Desktop app); paths are relative to this file
 token = "secrets/token_gmail.json"   # created by "sign in" (settings -> "Система" / System) or --google-auth
-# forms = ["unread", "unread", "unread"]  # word for 1 / 2-4 / 5+ messages; default: the [ui] language's
 
 [[screen.widgets]]
 type = "rates"             # PrivatBank buy / sell to UAH

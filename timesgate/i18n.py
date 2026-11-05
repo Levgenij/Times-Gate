@@ -5,19 +5,19 @@ A text missing from UK simply stays in English.
 """
 LANGUAGES = ("en", "uk")
 
-# Words drawn on the device screens. Weekdays are Monday first; "unread" = Gmail word for 1 / 2-4 / 5+ messages.
+# Words drawn on the device screens. Weekdays are Monday first.
 WORDS = {
     "en": {
         "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
         "today": "Today", "tomorrow": "Tomorrow", "now_until": "Now · until {}", "all_day": "all day",
         "task": "task", "undated_task": "Task", "overdue": "Overdue", "untitled": "(untitled)",
-        "unread": ["unread", "unread", "unread"],
+        "total": "Total", "inbox": "Inbox",
     },
     "uk": {
         "weekdays": ["Пон", "Вів", "Сер", "Чет", "П’ят", "Суб", "Нед"],
         "today": "Сьогодні", "tomorrow": "Завтра", "now_until": "Зараз · до {}", "all_day": "весь день",
         "task": "завдання", "undated_task": "Завдання", "overdue": "Прострочено", "untitled": "(без назви)",
-        "unread": ["непрочитаний", "непрочитані", "непрочитаних"],
+        "total": "Усього", "inbox": "Вхідні",
     },
 }
 
@@ -81,10 +81,10 @@ UK = {
     "Sky icon next to the temperature": "Іконка неба біля температури",
     "Tomorrow and the day after at the bottom: icon, max/min": "Унизу завтра й післязавтра: іконка, макс./мін.",
     # gmail
-    "Unread count; shown only when it grows": "Кількість непрочитаних; показується, лише коли їх стало більше",
-    "INBOX = all tabs, CATEGORY_PERSONAL = Primary only": "INBOX — усі вкладки, CATEGORY_PERSONAL — лише «Основні»",
-    "Word for 1 / 2–4 / 5+ messages (empty = the language's own)":
-        "Слово для 1 / 2–4 / 5+ листів (порожньо = як у вибраній мові)",
+    "Unread mail: total and by label; shown only when it grows":
+        "Непрочитані: усього й за мітками; показується, лише коли їх стало більше",
+    "Label counted as Total: UNREAD = all unread mail, INBOX = the inbox only":
+        "Мітка, яку рахує «Усього»: UNREAD — усі непрочитані, INBOX — лише вхідні",
     # calendar
     "Calendar": "Календар",
     "Google events and tasks: today's past events in grey, then the next ones":

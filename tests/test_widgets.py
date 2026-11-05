@@ -17,7 +17,7 @@ from timesgate.widgets import gcalendar
 from timesgate.widgets.gcalendar import ROW, Calendar, Item, when
 from timesgate.widgets.chart import BOTTOM, LEFT, RIGHT, TOP, points
 from timesgate.widgets.clock import Clock
-from timesgate.widgets.gmail import SCOPES, Gmail, decide, plural
+from timesgate.widgets.gmail import SCOPES, Gmail, decide, top
 from timesgate.widgets.google import google_error
 from timesgate.widgets.prices import Prices
 from timesgate.widgets.rates import parse
@@ -115,11 +115,27 @@ class GmailTest(unittest.TestCase):
             showing, prev = decide(prev, count, showing), count
             self.assertEqual(showing, want, f"count={count}")
 
-    def test_plural(self):
-        forms = ["непрочитаний", "непрочитані", "непрочитаних"]
-        for n, want in [(1, 0), (21, 0), (101, 0), (2, 1), (4, 1), (23, 1), (5, 2), (0, 2),
-                        (11, 2), (12, 2), (14, 2), (111, 2), (112, 2)]:
-            self.assertEqual(plural(n, forms), forms[want], f"n={n}")
+    def test_top_rows(self):
+        counts = [("Inbox", 2), ("Work", 5), ("Bank", 0), ("A", 1), ("B", 3), ("C", 1)]
+        self.assertEqual(top(counts), [("Work", 5), ("B", 3), ("Inbox", 2), ("A", 1)])  # no zero, at most 4
+
+    def test_rows_are_inbox_and_own_labels(self):
+        g = self.gmail()
+        g.session = MagicMock()
+        labels = [{"id": "INBOX", "name": "INBOX", "type": "system"}, {"id": "SPAM", "name": "SPAM", "type": "system"},
+                  {"id": "CATEGORY_SOCIAL", "name": "CATEGORY_SOCIAL", "type": "system"},
+                  {"id": "Label_1", "name": "Work", "type": "user"}, {"id": "Label_2", "name": "Bank", "type": "user"}]
+        unread = {"UNREAD": 9, "INBOX": 4, "SPAM": 7, "CATEGORY_SOCIAL": 8, "Label_1": 2, "Label_2": 0}
+
+        def get(url, **_):
+            r = MagicMock(ok=True)
+            last = url.rsplit("/", 1)[-1]
+            r.json.return_value = {"labels": labels} if last == "labels" else {"messagesUnread": unread[last]}
+            return r
+        g.session.get.side_effect = get
+        self.assertEqual(g.rows(), [("Вхідні", 4), ("Work", 2)])  # no SPAM / categories, no empty labels
+        (img,) = g.frames()  # total UNREAD 0 -> 9 grew: shown
+        self.assertEqual(img.size, (128, 128))
 
     def gmail(self, **opts):
         with tempfile.TemporaryDirectory() as d, self.assertLogs("timesgate.gmail", "WARNING"):
@@ -134,7 +150,9 @@ class GmailTest(unittest.TestCase):
         g.session.get.return_value.json.return_value = {"id": "CATEGORY_PERSONAL", "messagesUnread": 7}
         self.assertEqual(g.unread(), 7)
         self.assertTrue(g.session.get.call_args.args[0].endswith("/users/me/labels/CATEGORY_PERSONAL"))
-        self.assertIsNotNone(g.frames())  # 0 -> 7 grew: shown
+        g.session.get.return_value.json.return_value = {"messagesUnread": 0}
+        self.assertIsNone(g.frames())  # nothing unread: no label requests, the slot falls through
+        self.assertEqual(g.session.get.call_count, 2)
 
     def test_rejected_token_disables(self):
         g = self.gmail()

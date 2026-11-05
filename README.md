@@ -139,7 +139,7 @@ Config errors (unknown widget or option, duplicate slot, bad IP) are reported at
 | `clock` | `blink`, `date`, `date_format` (`%d.%m`), `weekdays` (7 names; default: the language's), `time_size`, `date_size` | the PC clock |
 | `chart` | `market`, `symbol` (`BTCUSDT`), `interval` (`15m`), `candles` (96), `title` | Binance `klines` |
 | `weather` | `place`, `lat`, `lon`, `timezone`, `icon` (`true`), `forecast` (`true`) | [Open-Meteo](https://open-meteo.com), no API key |
-| `gmail` | `label` (`INBOX`), `client_secret` (`secrets/client_secret*.json`), `token` (`secrets/token_gmail.json`), `forms` (word for 1 / 2–4 / 5+; default: the language's) | Gmail API |
+| `gmail` | `label` (`UNREAD`), `client_secret` (`secrets/client_secret*.json`), `token` (`secrets/token_gmail.json`) | Gmail API |
 | `calendar` | `calendar` (`primary`), `tasks` (`true`), `tasklist` (`@default`), `days` (7), `count` (4), `past` (1), `client_secret`, `token` (`secrets/token_calendar.json`) | Google Calendar API, Google Tasks API |
 | `text` | `text`, `size`, `cyrillic` | — |
 
@@ -162,9 +162,9 @@ Both widgets use one OAuth client (`secrets/client_secret*.json`), but each keep
 | `gmail` | `gmail.labels` | `secrets/token_gmail.json` | see labels and message counts; **cannot read, send or delete mail** |
 | `calendar` | `calendar.events.readonly`, `tasks.readonly` (if `tasks = true`) | `secrets/token_calendar.json` | read events and tasks; **cannot change, create or delete them** |
 
-**Gmail:** the unread count is the `messagesUnread` of `label`.
-- `INBOX` counts all tabs, so it can be higher than the "Primary" counter on the web.
-- `CATEGORY_PERSONAL` counts the Primary tab only.
+**Gmail:** on top **Total**, the unread count of `label` (`UNREAD` = all unread mail, also outside the inbox; `INBOX` = the inbox only). Below it, up to 4 labels with unread mail, most first: `INBOX` and your own labels (system labels like Spam and the category tabs are left out); long names end with "…".
+- The screen appears when Total grows and gives way when it drops or hits 0.
+- Gmail's label list has no counts, so each label costs one request. That happens only while the screen is shown, once per `every`.
 
 **Calendar:** `count` (1–4) rows from the calendar `calendar` (`primary` = your main one) and, if `tasks = true`, from the Google Tasks list `tasklist` (`@default` = "My Tasks").
 - On top, up to `past` (1) of today's events that already ended, in grey; more if little is coming.
