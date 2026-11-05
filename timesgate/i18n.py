@@ -37,7 +37,7 @@ UK = {
     "Created by the sign-in button on the System tab": "Створюється кнопкою «Увійти» на вкладці «Система»",
     # prices
     "Prices": "Ціни",
-    "Latest Binance prices, up to 4 rows": "Останні ціни Binance, до 4 рядків",
+    "Latest Binance prices and 24 h change, up to 4 rows": "Останні ціни Binance і зміна за 24 год, до 4 рядків",
     "futures = USDⓈ-M perpetual futures, spot = spot": "futures — безстрокові ф'ючерси USDⓈ-M, spot — спот",
     "Quote currency": "Валюта котирування",
     "Tickers without the quote currency, 1–4": "Тікери без валюти котирування, 1–4",

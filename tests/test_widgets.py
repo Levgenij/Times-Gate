@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import requests
 from google.auth.exceptions import RefreshError
 from PIL import ImageChops, ImageColor
 
@@ -380,6 +381,37 @@ class ClockTest(unittest.TestCase):
 
     def test_no_blink_single_frame(self):
         self.assertEqual(len(Clock(ctx(), blink=False).frames()), 1)
+
+
+class PricesTest(unittest.TestCase):
+    def test_change_is_green_up_red_down(self):
+        w = Prices(ctx(), symbols=["BTC", "ALCH", "NOPE"])
+        rows = {"BTCUSDT": {"lastPrice": "79578.1", "priceChangePercent": "1.62"},
+                "ALCHUSDT": {"lastPrice": "0.0382", "priceChangePercent": "-4.10"}}
+
+        def get_json(url, symbol):  # Binance answers 400 for a pair the market does not have
+            if symbol not in rows:
+                raise requests.HTTPError(response=MagicMock(status_code=400))
+            return rows[symbol]
+        w.get_json = MagicMock(side_effect=get_json)
+        (img,) = w.frames()  # NOPE is not on the market: "--", no crash
+        def tint(y0, y1):  # anti-aliased text: count clearly green / red pixels in the left column of a row
+            px = [img.getpixel((x, y)) for x in range(6, 50) for y in range(y0, y1)]
+            return sum(g > r + 60 for r, g, b in px), sum(r > g + 60 for r, g, b in px)
+        green, red = tint(16, 27)
+        self.assertTrue(green > 10 and red == 0)   # BTC +1.6% under the ticker, row 1
+        green, red = tint(43, 54)
+        self.assertTrue(red > 10 and green == 0)   # ALCH -4.1%, row 2
+        self.assertEqual(tint(70, 81), (0, 0))     # NOPE: no change shown
+        self.assertTrue(w.get_json.call_args.args[0].endswith("/ticker/24hr"))
+        # one small request per shown pair, never the whole market
+        self.assertEqual([c.kwargs["symbol"] for c in w.get_json.call_args_list], ["BTCUSDT", "ALCHUSDT", "NOPEUSDT"])
+
+    def test_other_errors_are_not_hidden(self):
+        w = Prices(ctx(), symbols=["BTC"])
+        w.get_json = MagicMock(side_effect=requests.HTTPError(response=MagicMock(status_code=429)))
+        with self.assertRaises(requests.HTTPError):  # rate limit: keep the last frame, retry later
+            w.frames()
 
 
 class OptionsTest(unittest.TestCase):

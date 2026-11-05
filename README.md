@@ -134,7 +134,7 @@ Config errors (unknown widget or option, duplicate slot, bad IP) are reported at
 
 | `type` | Options (defaults) | Source |
 |--------|--------------------|--------|
-| `prices` | `market` (`futures` / `spot`), `quote` (`USDT`), `symbols` (1–4) | Binance `ticker/price` |
+| `prices` | `market` (`futures` / `spot`), `quote` (`USDT`), `symbols` (1–4) | Binance `ticker/24hr` |
 | `rates` | `currencies` (1–2, `USD`, `EUR`) | PrivatBank `p24api/exchange_rates` |
 | `clock` | `blink`, `date`, `date_format` (`%d.%m`), `weekdays` (7 names; default: the language's), `time_size`, `date_size` | the PC clock |
 | `chart` | `market`, `symbol` (`BTCUSDT`), `interval` (`15m`), `candles` (96), `title` | Binance `klines` |
@@ -144,7 +144,7 @@ Config errors (unknown widget or option, duplicate slot, bad IP) are reported at
 | `text` | `text`, `size`, `cyrillic` | — |
 
 Details:
-- **`prices`**: of the default tickers only BTC exists on Binance spot, so they come from futures. The SPY future trades around the clock, so off-hours it can differ from the fund's close. A ticker missing on the market shows as `--`.
+- **`prices`**: last price on the right; on the left the ticker and its rolling 24 h change, green if up, red if down (like the chart). Of the default tickers only BTC exists on Binance spot, so they come from futures. The SPY future trades around the clock, so off-hours it can differ from the fund's close. A ticker missing on the market shows as `--`.
 - **`rates`**: buy on the left, sell on the right, the rates' date at the bottom. If today's rates aren't published yet, yesterday's are used.
 - **`clock`**: the colon blinks through a 2-frame, 500 ms animation that the device loops by itself; the program sends it once a minute. Sending a frame every second makes the device show its "loading" icon. Digits sit at fixed positions, so they don't jump.
 - **`chart`**: a line of candle closes stretched from min to max; green if the period went up, red if down.
