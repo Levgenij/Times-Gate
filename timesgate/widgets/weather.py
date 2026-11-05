@@ -25,6 +25,10 @@ class Weather(Widget):
     # Open-Meteo refreshes "current" every 15 min
     defaults = {"every": 900, "place": "LONDON", "lat": 51.5074, "lon": -0.1278, "timezone": "Europe/London",
                 "icon": True}
+    label, about = "Погода", "Температура, небо й денні макс./мін. з Open-Meteo"
+    help = {"place": "Назва над температурою (латиницею: стандартний шрифт без кирилиці)",
+            "lat": "Широта", "lon": "Довгота", "timezone": "Часовий пояс, напр. Europe/London",
+            "icon": "Іконка неба біля температури"}
 
     def fetch(self):
         data = self.get_json(URL, latitude=self.lat, longitude=self.lon, timezone=self.timezone, forecast_days=1,

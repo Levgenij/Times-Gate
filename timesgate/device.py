@@ -51,6 +51,12 @@ class Device:
                 except (requests.RequestException, DeviceError) as e:
                     log.warning("on_exit failed: %s", e)
 
+    def halt(self):
+        """Stop sending without on_exit (config reload: a new Device takes over); returns once no frame is in flight."""
+        self.closed = True
+        with self._lock:
+            pass
+
     def command(self, payload):
         # Plain requests.post on purpose: the reference keeps one request per connection with this device.
         r = requests.post(self.url, json=payload, timeout=self.timeout)

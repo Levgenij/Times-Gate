@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Times Gate</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect y='18' width='64' height='28' rx='6' fill='%231f2329'/%3E%3Cg fill='%238a9099'%3E%3Crect x='4' y='23' width='8' height='18' rx='2'/%3E%3Crect x='16' y='23' width='8' height='18' rx='2'/%3E%3Crect x='40' y='23' width='8' height='18' rx='2'/%3E%3Crect x='52' y='23' width='8' height='18' rx='2'/%3E%3C/g%3E%3Crect x='28' y='23' width='8' height='18' rx='2' fill='%23e8b04b'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #0c0e11; --panel: #14171c; --panel-2: #1a1e24; --border: #262b33; --border-2: #323843;
+  --text: #e7e9ec; --muted: #8d949e; --faint: #5d646e;
+  --accent: #e8b04b; --accent-ink: #1a1405; --ok: #3ccf7a; --err: #f05252; --warn: #e8b04b;
+  --radius: 12px; --shadow: 0 10px 30px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+code, .mono { font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-size: 12px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* header */
+.top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 16px;
+  padding: 12px 24px; background: rgba(12,14,17,.85); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: .2px; }
+.brand svg { width: 28px; height: 28px; }
+.pill { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 999px;
+  background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(60,207,122,.15); }
+.dot.err { background: var(--err); box-shadow: 0 0 0 3px rgba(240,82,82,.15); }
+.tabs { display: flex; gap: 2px; margin-left: 12px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 3px; }
+.tabs button { border: 0; background: none; padding: 6px 14px; border-radius: 7px; color: var(--muted); cursor: pointer; }
+.tabs button:hover { color: var(--text); }
+.tabs button.on { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--border-2); }
+.spacer { flex: 1; }
+.unsaved { color: var(--accent); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.btn { border: 1px solid var(--border-2); background: var(--panel-2); padding: 7px 14px; border-radius: 9px;
+  cursor: pointer; transition: background .15s, border-color .15s, opacity .15s; white-space: nowrap; }
+.btn:hover:not(:disabled) { border-color: var(--faint); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn.ghost { background: none; border-color: transparent; color: var(--muted); }
+.btn.ghost:hover:not(:disabled) { color: var(--text); border-color: var(--border); }
+.btn.small { padding: 4px 10px; font-size: 12px; }
+.icon-btn { border: 0; background: none; color: var(--muted); width: 28px; height: 28px; border-radius: 7px;
+  cursor: pointer; display: inline-grid; place-items: center; font-size: 15px; }
+.icon-btn:hover:not(:disabled) { background: var(--panel-2); color: var(--text); }
+.icon-btn:disabled { opacity: .3; cursor: default; }
+.icon-btn.danger:hover { color: var(--err); }
+
+main { max-width: 1240px; margin: 0 auto; padding: 24px; }
+.banner { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; margin-bottom: 20px; border-radius: var(--radius);
+  background: rgba(240,82,82,.08); border: 1px solid rgba(240,82,82,.35); color: #ffc9c9; }
+.banner b { color: var(--err); }
+.banner .btn { margin-left: auto; }
+h2 { font-size: 16px; margin: 0; font-weight: 600; }
+.sub { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); }
+.section { padding: 20px; margin-bottom: 20px; }
+.section > header { margin-bottom: 16px; }
+
+/* the 5 panels */
+.device { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; padding: 16px;
+  background: linear-gradient(#171a20, #121418); border: 1px solid var(--border); border-radius: 18px;
+  box-shadow: var(--shadow); margin-bottom: 24px; }
+.panel { border: 1px solid transparent; background: none; padding: 8px; border-radius: 12px; cursor: pointer;
+  text-align: left; transition: background .15s, border-color .15s; min-width: 0; }
+.panel:hover { background: rgba(255,255,255,.025); }
+.panel.on { border-color: var(--accent); background: rgba(232,176,75,.06); }
+.screen { aspect-ratio: 1; width: 100%; background: #000; border-radius: 6px; overflow: hidden;
+  display: grid; place-items: center; box-shadow: inset 0 0 0 1px #000, 0 0 0 1px var(--border); }
+.screen img { width: 100%; height: 100%; display: block; }
+.screen .empty { color: var(--faint); font-size: 12px; text-align: center; padding: 8px; }
+.pmeta { display: flex; align-items: center; gap: 8px; margin-top: 9px; font-size: 13px; }
+.num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--panel-2);
+  border: 1px solid var(--border-2); font-size: 11px; color: var(--muted); flex: none; }
+.panel.on .num { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.pname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pchain { color: var(--faint); font-size: 12px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.perr { color: var(--err); font-size: 12px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* editor */
+.editor { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+.ed-head { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 14px; }
+.wlist { display: flex; flex-direction: column; gap: 10px; }
+.wcard { overflow: hidden; transition: border-color .15s, opacity .15s; }
+.wcard.drag { opacity: .45; }
+.wcard.over { border-color: var(--accent); }
+.whead { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; user-select: none; }
+.grip { color: var(--faint); cursor: grab; font-size: 16px; line-height: 1; padding: 2px; }
+.prio { font-size: 11px; color: var(--muted); border: 1px solid var(--border-2); border-radius: 6px; padding: 1px 6px; }
+.wtitle { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.wtitle b { font-weight: 600; }
+.wtitle span { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chev { color: var(--faint); transition: transform .15s; }
+.chev.open { transform: rotate(90deg); }
+.wbody { padding: 4px 16px 16px; border-top: 1px solid var(--border); }
+.group { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--faint); margin: 16px 0 8px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field.wide { grid-column: 1 / -1; }
+.flabel { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; min-height: 22px; }
+.flabel code { color: var(--faint); font-size: 11px; }
+.reset { margin-left: auto; border: 0; background: none; color: var(--accent); cursor: pointer; font-size: 13px; padding: 0 2px; }
+.changed .flabel { color: var(--text); }
+input[type=text], input[type=number], select, textarea { width: 100%; background: var(--bg); border: 1px solid var(--border-2);
+  border-radius: 8px; padding: 7px 10px; outline: none; transition: border-color .15s; }
+input:focus, select:focus, textarea:focus, .chips:focus-within { border-color: var(--accent); }
+textarea { resize: vertical; }
+.hint { color: var(--faint); font-size: 12px; }
+.req { color: var(--accent); }
+.switch { position: relative; display: inline-block; width: 38px; height: 22px; }
+.switch input { opacity: 0; width: 100%; height: 100%; margin: 0; position: absolute; cursor: pointer; z-index: 1; }
+.switch i { position: absolute; inset: 0; background: var(--border-2); border-radius: 999px; transition: background .15s; }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; transition: transform .15s; }
+.switch input:checked + i { background: var(--accent); }
+.switch input:checked + i::after { transform: translateX(16px); }
+.switch input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 5px; background: var(--bg); border: 1px solid var(--border-2);
+  border-radius: 8px; min-height: 36px; cursor: text; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 9px; background: var(--panel-2);
+  border: 1px solid var(--border-2); border-radius: 6px; font-size: 13px; }
+.chip button { border: 0; background: none; color: var(--faint); cursor: pointer; padding: 0 4px; font-size: 14px; line-height: 1; }
+.chip button:hover { color: var(--err); }
+.chips input { flex: 1; min-width: 90px; border: 0; background: none; outline: none; padding: 3px 4px; }
+.color { display: flex; gap: 8px; }
+.color input[type=color] { width: 40px; height: 36px; padding: 2px; border: 1px solid var(--border-2); border-radius: 8px;
+  background: var(--bg); cursor: pointer; flex: none; }
+
+.add { border: 1px dashed var(--border-2); border-radius: var(--radius); background: none; color: var(--muted);
+  padding: 12px; cursor: pointer; width: 100%; transition: border-color .15s, color .15s; }
+.add:hover { border-color: var(--accent); color: var(--text); }
+.picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; padding: 12px; }
+.pick { text-align: left; border: 1px solid var(--border); background: var(--panel-2); border-radius: 10px; padding: 10px 12px;
+  cursor: pointer; transition: border-color .15s; }
+.pick:hover { border-color: var(--accent); }
+.pick b { display: block; font-weight: 600; }
+.pick span { color: var(--muted); font-size: 12px; }
+.empty-slot { padding: 28px; text-align: center; color: var(--muted); }
+
+/* preview */
+.pv { position: sticky; top: 76px; padding: 16px; }
+.pv h3 { font-size: 13px; font-weight: 600; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+.pv h3 .btn { margin-left: auto; }
+.pv-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pv-pair figure { margin: 0; }
+.pv-pair figcaption { color: var(--muted); font-size: 12px; margin-top: 6px; text-align: center; }
+.pv-big .screen { max-width: 256px; margin: 0 auto; }
+.pv-note { color: var(--muted); font-size: 12px; margin-top: 12px; }
+.pv-err { color: #ffc9c9; background: rgba(240,82,82,.08); border: 1px solid rgba(240,82,82,.3); border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; margin-top: 12px; word-break: break-word; }
+.spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border-2); border-top-color: var(--accent);
+  animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* system */
+.row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--border); }
+.row:first-of-type { border-top: 0; padding-top: 0; }
+.row .grow { flex: 1; min-width: 0; }
+.row .grow b { font-weight: 600; display: block; }
+.log { background: #08090b; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; height: 340px;
+  overflow: auto; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.55; color: #b9bec6; }
+.log .w { color: var(--warn); } .log .e { color: var(--err); } .log .d { color: var(--faint); }
+.radios { display: flex; flex-wrap: wrap; gap: 8px; }
+.radio { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--border-2); border-radius: 9px; cursor: pointer; }
+.radio.on { border-color: var(--accent); background: rgba(232,176,75,.06); }
+.radio input { accent-color: var(--accent); margin: 0; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+
+.toast { position: fixed; right: 24px; bottom: 24px; background: var(--panel-2); border: 1px solid var(--border-2);
+  border-left: 3px solid var(--ok); padding: 10px 16px; border-radius: 10px; box-shadow: var(--shadow); z-index: 20; }
+.fade-enter-active, .fade-leave-active { transition: opacity .2s, transform .2s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(6px); }
+.boot { display: grid; place-items: center; height: 60vh; color: var(--muted); }
+
+@media (max-width: 900px) {
+  .editor, .two { grid-template-columns: 1fr; }
+  .pv { position: static; }
+  .top { flex-wrap: wrap; padding: 10px 16px; }
+  main { padding: 16px; }
+  .device { gap: 6px; padding: 8px; }
+}
+</style>
+</head>
+<body>
+<div id="app"><div class="boot">Завантаження…</div></div>
+
+<script type="text/x-template" id="app-tpl">
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect y="18" width="64" height="28" rx="6" fill="#1f2329"/>
+      <g fill="#8a9099"><rect x="4" y="23" width="8" height="18" rx="2"/><rect x="16" y="23" width="8" height="18" rx="2"/>
+      <rect x="40" y="23" width="8" height="18" rx="2"/><rect x="52" y="23" width="8" height="18" rx="2"/></g>
+      <rect x="28" y="23" width="8" height="18" rx="2" fill="#e8b04b"/></svg>
+    Times Gate
+  </div>
+  <span class="pill" :title="status?.device.url">
+    <span class="dot" :class="!alive ? 'err' : status ? (status.device.online ? 'ok' : 'err') : ''"></span>
+    {{ !alive ? 'Програма не відповідає' : !status ? '…' : status.device.online ? 'Пристрій на зв’язку' : 'Пристрій недоступний' }}
+  </span>
+  <nav class="tabs" role="tablist">
+    <button v-for="t in tabs" :key="t.id" role="tab" :aria-selected="tab === t.id" :class="{ on: tab === t.id }"
+            @click="tab = t.id">{{ t.label }}</button>
+  </nav>
+  <div class="spacer"></div>
+  <span v-if="dirty" class="unsaved"><span class="dot" style="background: var(--accent)"></span>Є незбережені зміни</span>
+  <button class="btn ghost" :disabled="!dirty || saving" @click="revert">Скасувати</button>
+  <button class="btn primary" :disabled="!dirty || saving" @click="save" title="Ctrl+S">{{ saving ? 'Зберігаю…' : 'Зберегти' }}</button>
+</header>
+
+<main v-if="draft">
+  <div v-if="error" class="banner" role="alert">
+    <div><b>Не збережено.</b> {{ error }}</div>
+    <button class="btn small" @click="error = ''">Закрити</button>
+  </div>
+
+  <!-- SCREENS -->
+  <template v-if="tab === 'screens'">
+    <div class="device" role="listbox" aria-label="Екрани пристрою">
+      <button v-for="n in 5" :key="n" class="panel" :class="{ on: sel === n }" role="option" :aria-selected="sel === n"
+              @click="sel = n">
+        <div class="screen">
+          <img v-if="live(n)?.sent_at" :src="'/api/screen/' + n + '.png?v=' + live(n).sent_at" :alt="'Екран ' + n">
+          <div v-else class="empty">{{ widgetsOf(n).length ? 'ще нічого не надіслано' : 'не налаштовано' }}</div>
+        </div>
+        <div class="pmeta">
+          <span class="num">{{ n }}</span>
+          <span class="pname">{{ live(n)?.widget ? label(live(n).widget) : '—' }}</span>
+        </div>
+        <div v-if="errorsText(live(n))" class="perr" :title="errorsText(live(n))">⚠ {{ errorsText(live(n)) }}</div>
+        <div v-else class="pchain">{{ chain(n) }}{{ live(n)?.sent_at ? ' · ' + ago(live(n).sent_at) : '' }}</div>
+      </button>
+    </div>
+
+    <div class="editor">
+      <section>
+        <div class="ed-head">
+          <div>
+            <h2>Екран {{ sel }}</h2>
+            <p class="sub">Віджети за пріоритетом: на екрані перший, якому зараз є що показати.</p>
+          </div>
+        </div>
+
+        <div class="wlist">
+          <div v-for="(w, i) in widgetsOf(sel)" :key="keyOf(w)" class="card wcard"
+               :class="{ drag: dragFrom === i, over: dragOver === i && dragFrom !== i }"
+               @dragover.prevent="dragOver = i" @dragleave="dragOver = null" @drop="drop(i)">
+            <div class="whead" draggable="true" @dragstart="dragFrom = i" @dragend="dragFrom = dragOver = null"
+                 @click="toggle(w)">
+              <span class="grip" title="Перетягніть, щоб змінити пріоритет">⠿</span>
+              <span class="prio">{{ i + 1 }}</span>
+              <div class="wtitle">
+                <b>{{ label(w.type) }}</b>
+                <span>{{ summary(w) }}</span>
+              </div>
+              <button class="icon-btn" :disabled="i === 0" @click.stop="move(i, -1)" aria-label="Вище">↑</button>
+              <button class="icon-btn" :disabled="i === widgetsOf(sel).length - 1" @click.stop="move(i, 1)" aria-label="Нижче">↓</button>
+              <button class="icon-btn danger" @click.stop="remove(i)" aria-label="Видалити віджет">✕</button>
+              <span class="chev" :class="{ open: isOpen(w) }">›</span>
+            </div>
+            <div v-if="isOpen(w)" class="wbody">
+              <template v-if="schema.widgets[w.type]">
+                <div class="group">Параметри</div>
+                <div class="fields">
+                  <option-field v-for="o in own(w)" :key="o.name" :opt="o" :model="w"></option-field>
+                </div>
+                <div class="group">Розклад</div>
+                <div class="fields">
+                  <option-field v-for="o in sched(w)" :key="o.name" :opt="o" :model="w"></option-field>
+                </div>
+              </template>
+              <p v-else class="hint">Невідомий тип «{{ w.type }}».</p>
+            </div>
+          </div>
+
+          <div v-if="!widgetsOf(sel).length && !picking" class="card empty-slot">
+            На цьому екрані нічого немає. Додайте віджет — і він з’явиться на пристрої після збереження.
+          </div>
+
+          <div v-if="picking" class="card">
+            <div class="picker">
+              <button v-for="(s, t) in schema.widgets" :key="t" class="pick" @click="add(t)">
+                <b>{{ s.label }}</b><span>{{ s.about }}</span>
+              </button>
+            </div>
+            <div style="padding: 0 12px 12px; text-align: right"><button class="btn ghost small" @click="picking = false">Скасувати</button></div>
+          </div>
+          <button v-else class="add" @click="picking = true">+ Додати віджет</button>
+        </div>
+      </section>
+
+      <aside class="card pv" aria-live="polite">
+        <h3>Прев’ю <span v-if="preview.loading" class="spin"></span>
+          <button class="btn ghost small" @click="runPreview(sel)" :disabled="preview.loading">Оновити</button></h3>
+        <div class="pv-pair">
+          <figure>
+            <div class="screen">
+              <img v-if="live(sel)?.sent_at" :src="'/api/screen/' + sel + '.png?v=' + live(sel).sent_at" alt="">
+              <div v-else class="empty">—</div>
+            </div>
+            <figcaption>на пристрої</figcaption>
+          </figure>
+          <figure>
+            <div class="screen">
+              <img v-if="preview.frames.length" :src="'data:image/png;base64,' + preview.frames[preview.idx % preview.frames.length]" alt="">
+              <div v-else class="empty">{{ preview.loading ? '' : 'нічого показати' }}</div>
+            </div>
+            <figcaption>чернетка</figcaption>
+          </figure>
+        </div>
+        <p class="pv-note" v-if="preview.widget">Показується: <b>{{ label(preview.widget) }}</b>{{ preview.frames.length > 1 ? ' · анімація ' + preview.frames.length + ' кадри' : '' }}</p>
+        <p class="pv-note">Прев’ю бере свіжі дані з інтернету й нічого не надсилає на пристрій.</p>
+        <div v-for="(e, t) in preview.errors" :key="t" class="pv-err"><b>{{ label(t) }}:</b> {{ e }}</div>
+        <div v-if="preview.error" class="pv-err">{{ preview.error }}</div>
+      </aside>
+    </div>
+  </template>
+
+  <!-- DEVICE -->
+  <template v-if="tab === 'device'">
+    <section class="card section">
+      <header><h2>Підключення</h2><p class="sub">Локальний HTTP API Times Gate.</p></header>
+      <div class="fields">
+        <option-field v-for="o in deviceOpts" :key="o.name" :opt="o" :model="draft.device"></option-field>
+      </div>
+    </section>
+    <section class="card section">
+      <header><h2>Коли програма зупиняється</h2>
+        <p class="sub">Команда при виході з трею, Ctrl+C чи закритті консолі. Не надсилається, якщо комп’ютер вимкнувся, заснув або процес убито.</p></header>
+      <div class="radios" role="radiogroup">
+        <label v-for="m in exitModes" :key="m.id" class="radio" :class="{ on: exitMode === m.id }">
+          <input type="radio" name="exit" :checked="exitMode === m.id" @change="setExitMode(m.id)">{{ m.label }}
+        </label>
+      </div>
+      <div class="fields" style="margin-top: 14px" v-if="exitMode === 'clock'">
+        <option-field :opt="{ name: 'ClockId', kind: 'number', default: 581, help: 'Номер циферблата', required: true }"
+                      :model="draft.device.on_exit"></option-field>
+      </div>
+      <div class="field" style="margin-top: 14px" v-if="exitMode === 'custom'">
+        <span class="flabel">Команда у JSON <code>on_exit</code></span>
+        <textarea rows="3" class="mono" :value="exitText" @change="setExitText($event.target.value)"></textarea>
+        <span v-if="exitError" class="hint" style="color: var(--err)">{{ exitError }}</span>
+      </div>
+    </section>
+  </template>
+
+  <!-- THEME -->
+  <template v-if="tab === 'theme'">
+    <div class="two">
+      <section class="card section">
+        <header><h2>Кольори</h2><p class="sub">Спільні для всіх екранів.</p></header>
+        <div class="fields">
+          <option-field v-for="o in themeOpts" :key="o.name" :opt="o" :model="draft.theme"></option-field>
+        </div>
+      </section>
+      <aside class="card pv pv-big">
+        <h3>Прев’ю <span v-if="preview.loading" class="spin"></span></h3>
+        <div class="radios" style="margin-bottom: 12px">
+          <label v-for="n in configured" :key="n" class="radio" :class="{ on: themeSlot === n }">
+            <input type="radio" name="ts" :checked="themeSlot === n" @change="themeSlot = n">{{ n }}
+          </label>
+        </div>
+        <div class="screen">
+          <img v-if="preview.frames.length" :src="'data:image/png;base64,' + preview.frames[preview.idx % preview.frames.length]" alt="">
+          <div v-else class="empty">{{ preview.loading ? '' : 'нічого показати' }}</div>
+        </div>
+        <div v-if="preview.error" class="pv-err">{{ preview.error }}</div>
+      </aside>
+    </div>
+  </template>
+
+  <!-- SYSTEM -->
+  <template v-if="tab === 'system'">
+    <section class="card section">
+      <header><h2>Програма</h2></header>
+      <div class="row">
+        <div class="grow"><b>Запускати при вході в Windows</b>
+          <span class="hint">Без вікна консолі, з іконкою в треї. Якщо перенесли папку — увімкніть ще раз.</span></div>
+        <span v-if="autostart === null" class="hint">лише Windows</span>
+        <span v-else class="switch"><input type="checkbox" :checked="autostart" @change="setAutostart($event.target.checked)"
+              aria-label="Автозапуск"><i></i></span>
+      </div>
+      <div class="row">
+        <div class="grow"><b>Gmail</b>
+          <span class="hint">{{ !status?.gmail ? 'Віджет Gmail не додано на жоден екран.'
+            : status.gmail.active ? 'Підключено: лічильник оновлюється.' : status.gmail.authorized ? 'Токен є, але не працює — увійдіть ще раз.'
+            : 'Не підключено. Потрібен client_secret*.json поруч із config.toml.' }}</span></div>
+        <button class="btn" :disabled="!status?.gmail" @click="gmailAuth">{{ status?.gmail?.authorized ? 'Увійти знову' : 'Увійти в Gmail' }}</button>
+      </div>
+      <div class="row">
+        <div class="grow" style="max-width: 520px"><div class="fields">
+          <option-field :opt="levelOpt" :model="draft.log"></option-field>
+          <option-field :opt="portOpt" :model="draft.ui"></option-field>
+        </div></div>
+      </div>
+      <p class="hint" style="margin: 8px 0 0">Конфігурація: <span class="mono">{{ path }}</span>. Попередня версія зберігається як <span class="mono">config.toml.bak</span>.</p>
+    </section>
+    <section class="card section">
+      <header style="display: flex; align-items: flex-end"><div><h2>Журнал</h2><p class="sub">Останні 300 рядків.</p></div></header>
+      <div class="log mono" ref="logBox"><div v-for="(l, i) in logs" :key="i" :class="logClass(l)">{{ l }}</div>
+        <div v-if="!logs.length" class="d">Порожньо.</div></div>
+    </section>
+  </template>
+</main>
+
+<transition name="fade"><div v-if="toast" class="toast" role="status">{{ toast }}</div></transition>
+</script>
+
+<script type="module">
+import { createApp, ref, reactive, computed, watch, nextTick, onMounted } from '/vue.js'
+
+async function api(method, url, body) {
+  const opts = { method }
+  if (body !== undefined) Object.assign(opts, { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const r = await fetch(url, opts)
+  const data = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(data.error || r.statusText)
+  return data
+}
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+
+function duration(s) {
+  if (!s || s < 60) return ''
+  const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60)
+  return '≈ ' + (h ? h + ' год' + (m ? ' ' + m + ' хв' : '') : m + ' хв')
+}
+
+const ChipsInput = {
+  props: ['modelValue', 'placeholder'],
+  emits: ['update:modelValue'],
+  data: () => ({ text: '' }),
+  methods: {
+    add() {
+      const v = this.text.trim().replace(/,$/, '')
+      if (v) this.$emit('update:modelValue', [...this.modelValue, v])
+      this.text = ''
+    },
+    remove(i) { const a = [...this.modelValue]; a.splice(i, 1); this.$emit('update:modelValue', a) },
+    key(e) {
+      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); this.add() }
+      else if (e.key === 'Backspace' && !this.text && this.modelValue.length) this.remove(this.modelValue.length - 1)
+    },
+  },
+  template: `<div class="chips" @click="$refs.inp.focus()">
+    <span v-for="(c, i) in modelValue" :key="i + c" class="chip">{{ c }}<button type="button" @click.stop="remove(i)" :aria-label="'Прибрати ' + c">×</button></span>
+    <input ref="inp" v-model="text" @keydown="key" @blur="add" :placeholder="modelValue.length ? '' : placeholder">
+  </div>`,
+}
+
+const OptionField = {
+  props: ['opt', 'model'],
+  components: { ChipsInput },
+  computed: {
+    value() { return this.opt.name in this.model ? this.model[this.opt.name] : this.opt.default },
+    changed() { return this.opt.name in this.model && !same(this.model[this.opt.name], this.opt.default) },
+    multiline() { return typeof this.opt.default === 'string' && this.opt.default.includes('\n') },
+    hint() { return ['every', 'retry'].includes(this.opt.name) ? duration(this.value) : '' },
+  },
+  methods: {
+    set(v) { this.model[this.opt.name] = v },
+    setNum(e) {
+      const s = e.target.value
+      if (s === '') { if (!this.opt.required) delete this.model[this.opt.name] }
+      else if (!Number.isNaN(Number(s))) this.set(Number(s))
+    },
+    reset() { delete this.model[this.opt.name] },
+  },
+  template: `<div class="field" :class="{ wide: opt.kind === 'list' || multiline, changed }">
+    <span class="flabel">{{ opt.help || opt.name }}<span v-if="opt.required" class="req">*</span> <code>{{ opt.name }}</code>
+      <button v-if="changed && !opt.required" type="button" class="reset" @click="reset" title="Повернути типове значення">↺</button></span>
+    <span v-if="opt.kind === 'bool'" class="switch"><input type="checkbox" :checked="value" @change="set($event.target.checked)" :aria-label="opt.help || opt.name"><i></i></span>
+    <select v-else-if="opt.kind === 'choice'" :value="value" @change="set($event.target.value)" :aria-label="opt.name">
+      <option v-for="c in opt.choices" :key="c" :value="c">{{ c }}</option></select>
+    <input v-else-if="opt.kind === 'number'" type="number" step="any" :value="value ?? ''"
+           :placeholder="opt.default ?? 'як every'" @input="setNum" :aria-label="opt.name">
+    <chips-input v-else-if="opt.kind === 'list'" :model-value="value" @update:model-value="set" placeholder="Введіть і натисніть Enter"></chips-input>
+    <span v-else-if="opt.kind === 'color'" class="color">
+      <input type="color" :value="value" @input="set($event.target.value)" :aria-label="opt.name">
+      <input type="text" :value="value" @change="set($event.target.value.trim())" class="mono"></span>
+    <textarea v-else-if="multiline" rows="3" :value="value" @input="set($event.target.value)" :aria-label="opt.name"></textarea>
+    <input v-else type="text" :value="value" @input="set($event.target.value)" :aria-label="opt.name">
+    <span v-if="hint" class="hint">{{ hint }}</span>
+  </div>`,
+}
+
+const THEME_LABELS = {
+  background: 'Фон', text: 'Основний текст', muted: 'Підписи', dim: 'Нижній рядок (час, дата)',
+  up: 'Ріст (лінія графіка)', down: 'Падіння', up_fill: 'Заливка під ростом', down_fill: 'Заливка під падінням',
+  cyrillic_font: 'Шрифт із кирилицею (.ttf)',
+}
+const DEVICE_LABELS = {
+  port: 'Порт', path: 'Шлях API', timeout: 'Тайм-аут запиту, секунд', jpeg_quality: 'Якість JPEG, 1–100',
+}
+const CLOCK_CMD = 'Channel/Set5LcdWholeClockId'
+
+createApp({
+  template: '#app-tpl',
+  components: { OptionField },
+  setup() {
+    const schema = ref(null), draft = ref(null), saved = ref(''), path = ref('')
+    const status = ref(null), alive = ref(true)
+    const tab = ref('screens'), sel = ref(3), themeSlot = ref(3)
+    const tabs = [{ id: 'screens', label: 'Екрани' }, { id: 'device', label: 'Пристрій' },
+                  { id: 'theme', label: 'Тема' }, { id: 'system', label: 'Система' }]
+    const error = ref(''), toast = ref(''), saving = ref(false), picking = ref(false)
+    const autostart = ref(null), logs = ref([]), logBox = ref(null)
+    const dragFrom = ref(null), dragOver = ref(null)
+    const opened = reactive(new Set())
+    const ids = new WeakMap(); let nextId = 0
+    const preview = reactive({ frames: [], speed: 100, widget: null, errors: {}, error: '', loading: false, idx: 0 })
+
+    const dirty = computed(() => !!draft.value && JSON.stringify(draft.value) !== saved.value)
+    const label = t => schema.value?.widgets[t]?.label || t
+    const screenOf = n => draft.value.screen.find(s => s.slot === n)
+    const widgetsOf = n => screenOf(n)?.widgets || []
+    const configured = computed(() => draft.value.screen.map(s => s.slot).sort())
+    const live = n => status.value?.slots.find(s => s.slot === n)
+    const chain = n => widgetsOf(n).map(w => label(w.type)).join(' → ') || 'порожньо'
+    const errorsText = s => s && Object.entries(s.errors).map(([t, e]) => label(t) + ': ' + e).join('; ')
+    const keyOf = w => { if (!ids.has(w)) ids.set(w, ++nextId); return ids.get(w) }
+    const isOpen = w => opened.has(keyOf(w))
+    const toggle = w => { const k = keyOf(w); opened.has(k) ? opened.delete(k) : opened.add(k) }
+    const opts = w => schema.value.widgets[w.type].options
+    const own = w => opts(w).filter(o => !['every', 'retry', 'align'].includes(o.name))
+    const sched = w => opts(w).filter(o => ['every', 'retry', 'align'].includes(o.name))
+    function summary(w) {
+      const parts = own(w).filter(o => o.name in w && !same(w[o.name], o.default))
+        .map(o => Array.isArray(w[o.name]) ? w[o.name].join(', ') : String(w[o.name]).replace(/\n/g, ' '))
+      return (parts.join(' · ') || schema.value.widgets[w.type]?.about || '') + (w.every ? ' · кожні ' + (duration(w.every).slice(2) || w.every + ' с') : '')
+    }
+    function ago(ts) {
+      const d = Date.now() / 1000 - ts
+      if (d < 60) return 'щойно'
+      if (d < 3600) return Math.floor(d / 60) + ' хв тому'
+      return new Date(ts * 1000).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+    }
+
+    function add(type) {
+      let s = screenOf(sel.value)
+      if (!s) { s = { slot: sel.value, widgets: [] }; draft.value.screen.push(s); draft.value.screen.sort((a, b) => a.slot - b.slot) }
+      s.widgets.push({ type })
+      opened.add(keyOf(s.widgets[s.widgets.length - 1]))
+      picking.value = false
+    }
+    function remove(i) {
+      const s = screenOf(sel.value)
+      s.widgets.splice(i, 1)
+      if (!s.widgets.length) draft.value.screen.splice(draft.value.screen.indexOf(s), 1)
+    }
+    function move(i, d) {
+      const w = screenOf(sel.value).widgets
+      ;[w[i], w[i + d]] = [w[i + d], w[i]]
+    }
+    function drop(i) {
+      const from = dragFrom.value
+      dragFrom.value = dragOver.value = null
+      if (from === null || from === i) return
+      const w = screenOf(sel.value).widgets
+      w.splice(i, 0, w.splice(from, 1)[0])
+    }
+
+    // device / theme / system forms reuse OptionField with hand-made option descriptions
+    const deviceOpts = computed(() => [
+      { name: 'ip', kind: 'text', default: '', help: 'IP-адреса пристрою', required: true },
+      ...Object.entries(schema.value.device).map(([k, v]) => ({ name: k, default: v, kind: typeof v === 'number' ? 'number' : 'text', help: DEVICE_LABELS[k] })),
+    ])
+    const themeOpts = computed(() => Object.entries(schema.value.theme).map(([k, v]) =>
+      ({ name: k, default: v, kind: k === 'cyrillic_font' ? 'text' : 'color', help: THEME_LABELS[k] })))
+    const levelOpt = computed(() => ({ name: 'level', kind: 'choice', choices: schema.value.levels, default: 'INFO', help: 'Рівень журналу' }))
+    const portOpt = computed(() => ({ name: 'port', kind: 'number', default: schema.value.ui.port, help: 'Порт цієї сторінки (після перезапуску програми)' }))
+
+    const exitModes = [{ id: 'none', label: 'Нічого не робити' }, { id: 'clock', label: 'Увімкнути вбудований годинник' }, { id: 'custom', label: 'Своя команда' }]
+    const exitError = ref(''), exitCustom = ref(false)
+    const isClock = e => e.Command === CLOCK_CMD && Object.keys(e).length === 2 && 'ClockId' in e
+    const exitMode = computed(() => {
+      const e = draft.value.device.on_exit
+      return !e ? 'none' : exitCustom.value || !isClock(e) ? 'custom' : 'clock'
+    })
+    const exitText = computed(() => JSON.stringify(draft.value.device.on_exit || {}))
+    function setExitMode(m) {
+      const dev = draft.value.device
+      exitError.value = ''
+      exitCustom.value = m === 'custom'
+      if (m === 'none') delete dev.on_exit
+      else if (m === 'clock') dev.on_exit = { Command: CLOCK_CMD, ClockId: dev.on_exit?.ClockId ?? 581 }
+      else dev.on_exit ??= { Command: CLOCK_CMD, ClockId: 581 }
+    }
+    function setExitText(t) {
+      try {
+        const v = JSON.parse(t)
+        if (typeof v !== 'object' || !v || typeof v.Command !== 'string') throw new Error('потрібен об’єкт з полем "Command"')
+        draft.value.device.on_exit = v; exitError.value = ''
+      } catch (e) { exitError.value = 'Не застосовано: ' + e.message }
+    }
+
+    // preview of the draft: debounced, newest request wins
+    let pvTimer, pvSeq = 0, animTimer
+    const pvSlot = computed(() => tab.value === 'theme' ? themeSlot.value : sel.value)
+    async function runPreview(n) {
+      const my = ++pvSeq
+      preview.loading = true
+      try {
+        const r = await api('POST', '/api/preview', { config: draft.value, slot: n })
+        if (my !== pvSeq) return
+        Object.assign(preview, { frames: r.frames, speed: r.speed || 100, widget: r.widget, errors: r.errors, error: '', idx: 0 })
+      } catch (e) {
+        if (my === pvSeq) Object.assign(preview, { frames: [], widget: null, errors: {}, error: e.message })
+      } finally {
+        if (my === pvSeq) preview.loading = false
+      }
+    }
+    watch(() => ['screens', 'theme'].includes(tab.value) && draft.value &&
+                 [pvSlot.value, JSON.stringify(screenOf(pvSlot.value) || null), JSON.stringify(draft.value.theme)],
+          (v, old) => {
+            if (!v) return
+            clearTimeout(pvTimer)
+            // switching slot or tab: at once; typing: wait until it settles
+            const now = !old || v[0] !== old[0]
+            pvTimer = setTimeout(() => runPreview(v[0]), now ? 0 : 800)
+          }, { immediate: true })
+    watch(() => [preview.frames, preview.speed], () => {
+      clearInterval(animTimer)
+      if (preview.frames.length > 1) animTimer = setInterval(() => preview.idx++, preview.speed)
+    })
+
+    async function load() {
+      const r = await api('GET', '/api/config')
+      const c = r.config
+      for (const k of ['device', 'theme', 'log', 'ui']) c[k] ??= {}
+      c.screen ??= []
+      schema.value = r.schema; path.value = r.path
+      draft.value = c; saved.value = JSON.stringify(c)
+    }
+    async function save() {
+      if (!dirty.value || saving.value) return
+      saving.value = true; error.value = ''
+      try {
+        await api('PUT', '/api/config', draft.value)
+        saved.value = JSON.stringify(draft.value)
+        flash('Збережено. Екрани оновлюються…')
+        setTimeout(poll, 1500)
+      } catch (e) { error.value = e.message }
+      finally { saving.value = false }
+    }
+    function revert() { draft.value = JSON.parse(saved.value); error.value = ''; picking.value = false }
+    let toastTimer
+    function flash(msg) { toast.value = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.value = '', 3500) }
+
+    async function poll() {
+      try { status.value = await api('GET', '/api/status'); alive.value = true } catch { alive.value = false }
+      if (tab.value === 'system') {
+        try {
+          const box = logBox.value, atEnd = !box || box.scrollTop + box.clientHeight >= box.scrollHeight - 20
+          logs.value = (await api('GET', '/api/log')).lines
+          if (atEnd) nextTick(() => logBox.value && (logBox.value.scrollTop = logBox.value.scrollHeight))
+        } catch {}
+      }
+    }
+    watch(tab, t => { if (t === 'system') { poll(); loadAutostart() } })
+    async function loadAutostart() { try { autostart.value = (await api('GET', '/api/autostart')).enabled } catch {} }
+    async function setAutostart(on) {
+      try {
+        autostart.value = (await api('PUT', '/api/autostart', { enabled: on })).enabled
+        flash(on ? 'Автозапуск увімкнено' : 'Автозапуск вимкнено')
+      } catch (e) { error.value = e.message; loadAutostart() }
+    }
+    async function gmailAuth() {
+      try { await api('POST', '/api/gmail-auth', {}); flash('Відкрився браузер — увійдіть у Google і дозвольте доступ') }
+      catch (e) { error.value = e.message }
+    }
+    const logClass = l => / (WARNING) /.test(l) ? 'w' : / (ERROR|CRITICAL) /.test(l) ? 'e' : / DEBUG /.test(l) ? 'd' : ''
+
+    onMounted(async () => {
+      try { await load() } catch (e) { error.value = 'Не вдалося завантажити конфігурацію: ' + e.message }
+      poll(); setInterval(poll, 3000)
+      if (!screenOf(sel.value) && draft.value?.screen.length) sel.value = draft.value.screen[0].slot
+      themeSlot.value = sel.value
+    })
+    window.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save() } })
+    window.addEventListener('beforeunload', e => { if (dirty.value) { e.preventDefault(); e.returnValue = '' } })
+
+    return { schema, draft, path, status, alive, tab, tabs, sel, themeSlot, error, toast, saving, picking, autostart, logs, logBox,
+             dragFrom, dragOver, preview, dirty, label, widgetsOf, configured, live, chain, errorsText, keyOf, isOpen, toggle,
+             own, sched, summary, ago, add, remove, move, drop, deviceOpts, themeOpts, levelOpt, portOpt, exitModes, exitMode,
+             exitText, exitError, setExitMode, setExitText, runPreview, save, revert, setAutostart, gmailAuth, logClass }
+  },
+}).mount('#app')
+</script>
+</body>
+</html>

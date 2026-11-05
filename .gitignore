@@ -10,3 +10,5 @@ out/
 client_secret*.json
 token*.json
 timesgate.log*
+config.toml.bak
+config.tmp

@@ -21,6 +21,11 @@ class Chart(Widget):
     type = "chart"
     defaults = {"every": 300, "market": "futures", "symbol": "BTCUSDT",
                 "interval": "15m", "candles": 96, "title": "BTC 24h"}  # 96 x 15m = 24 h
+    label, about = "Графік","Графік закриттів свічок Binance, зміна у % і остання ціна"
+    choices = {"market": list(KLINES),
+               "interval": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w"]}
+    help = {"symbol": "Пара повністю, напр. BTCUSDT", "interval": "Довжина однієї свічки",
+            "candles": "Кількість свічок, 2–1000 (96 × 15m = доба)", "title": "Підпис над графіком"}
 
     def setup(self):
         if self.market not in KLINES:

@@ -8,6 +8,7 @@ from .base import ConfigError, Widget
 # Labels and their counts only: this token cannot read, send or delete mail.
 SCOPES = ["https://www.googleapis.com/auth/gmail.labels"]
 LABEL_URL = "https://gmail.googleapis.com/gmail/v1/users/me/labels/{}"
+_warned = set()  # token paths already reported missing
 
 
 def decide(prev, count, showing):
@@ -41,6 +42,11 @@ class Gmail(Widget):
         "token": "token.json",                   # written by --gmail-auth, next to config.toml
         "forms": ["непрочитаний", "непрочитані", "непрочитаних"],  # for 1 / 2-4 / 5+
     }
+    label, about = "Gmail", "Кількість непрочитаних; показується, лише коли їх стало більше"
+    help = {"label": "INBOX — усі вкладки, CATEGORY_PERSONAL — лише «Основні»",
+            "client_secret": "OAuth-клієнт (Desktop app) поруч із config.toml, можна маску",
+            "token": "Створюється кнопкою «Увійти в Gmail»",
+            "forms": "Слово для 1 / 2–4 / 5+ листів"}
 
     def setup(self):
         if len(self.forms) != 3:
@@ -50,7 +56,8 @@ class Gmail(Widget):
         if self.token_path.exists():
             creds = Credentials.from_authorized_user_file(self.token_path, SCOPES)
             self.session = AuthorizedSession(creds)  # refreshes the hourly access token by itself
-        else:
+        elif self.token_path not in _warned:  # once: every preview in the settings UI builds a new widget
+            _warned.add(self.token_path)
             self.log.warning("%s not found, gmail widget disabled; run: python -m timesgate --gmail-auth",
                              self.token_path.name)
 

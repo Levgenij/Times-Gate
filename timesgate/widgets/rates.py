@@ -18,6 +18,8 @@ class Rates(Widget):
     """PrivatBank buy / sell rates to UAH, with the date they are for."""
     type = "rates"
     defaults = {"every": 5 * 3600, "retry": 300, "currencies": ["USD", "EUR"]}
+    label, about = "Курси валют", "Купівля / продаж у ПриватБанку до гривні"
+    help = {"currencies": "Коди валют, 1–2, напр. USD, EUR"}
 
     def setup(self):
         if not 1 <= len(self.currencies) <= 2:

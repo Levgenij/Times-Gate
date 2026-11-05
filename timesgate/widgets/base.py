@@ -15,6 +15,16 @@ class Widget:
     type = ""       # name used in config.toml
     defaults = {}   # widget options and their default values
     speed = 100     # ms per frame when frames() returns an animation
+    # Settings UI only (Ukrainian, like the UI): name, one-line description, per-option hints and drop-down values.
+    label = ""
+    about = ""
+    help = {}
+    choices = {}
+    common_help = {
+        "every": "Як часто оновлювати, секунд",
+        "retry": "Повтор після помилки, секунд (порожньо = як «every»)",
+        "align": "Оновлювати рівно на межі інтервалу, напр. на початку хвилини",
+    }
 
     def __init__(self, ctx, **opts):
         allowed = {"every": 60, "retry": None, "align": False, **self.defaults}

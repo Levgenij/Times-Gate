@@ -13,6 +13,11 @@ class Clock(Widget):
         "weekdays": ["Пон", "Вів", "Сер", "Чет", "П’ят", "Суб", "Нед"],  # Monday first
         "time_size": 42, "date_size": 14,
     }
+    label, about = "Годинник", "24-годинний час і дата з днем тижня"
+    help = {"blink": "Двокрапка блимає (анімація з 2 кадрів, яку крутить сам пристрій)",
+            "date": "Показувати дату під часом", "date_format": "Формат strftime, напр. %d.%m",
+            "weekdays": "7 назв, починаючи з понеділка", "time_size": "Розмір цифр часу, px",
+            "date_size": "Розмір дати, px"}
 
     def setup(self):
         if len(self.weekdays) != 7:

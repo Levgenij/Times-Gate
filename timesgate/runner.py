@@ -26,8 +26,10 @@ class Slot:
     def __init__(self, number, widgets):
         self.number, self.widgets = number, widgets
         self.results = [None] * len(widgets)  # last frames each widget returned
+        self.errors = [None] * len(widgets)   # last failure of each widget, for the UI
         self.due = [0.0] * len(widgets)
         self.shown = None  # digest of what the device shows on this slot
+        self.sent = None   # (widget type, frames, time) last sent, for the UI
 
     def tick(self, now):
         """Run due widgets; return (widget, frames) of the highest-priority widget with frames, or (None, None)."""
@@ -35,11 +37,12 @@ class Slot:
             if now < self.due[i]:
                 continue
             try:
-                self.results[i] = w.frames()
+                self.results[i], self.errors[i] = w.frames(), None
                 delay = w.every
             # Long-running display: an API change or outage in one widget must not kill the slot.
             except Exception as e:
                 log.warning("slot %d %s: %s (keeping last frames)", self.number, w.type, e)
+                self.errors[i] = str(e) or type(e).__name__
                 delay = w.retry or w.every
             self.due[i] = next_time(now, delay, w.align)
         return next(((w, r) for w, r in zip(self.widgets, self.results) if r), (None, None))
@@ -54,7 +57,7 @@ class Slot:
             if key != self.shown:
                 try:
                     device.send(self.number, frames, widget.speed)
-                    self.shown = key
+                    self.shown, self.sent = key, (widget.type, frames, now)
                     log.debug("slot %d: sent %s (%d frame(s))", self.number, widget.type, len(frames))
                 except DeviceDown:  # logged once by Device
                     wake = min(wake, device.down_until)
@@ -97,20 +100,50 @@ def on_console_close(callback):
     ctypes.windll.kernel32.SetConsoleCtrlHandler(handler, True)
 
 
-def run(slots, device):
-    stop = threading.Event()
-    threads = [threading.Thread(target=s.run, args=(device, stop), name=f"slot{s.number}", daemon=True)
-               for s in slots]
-    for t in threads:
-        t.start()
-    on_console_close(lambda: (stop.set(), device.close()))
+class Runner:
+    """Runs one Config's slots in threads; reload() swaps in a new Config without restarting the program."""
+
+    def __init__(self):
+        self.cfg = None
+        self.done = threading.Event()  # set by stop(): the program should exit
+        self._stop = None              # stop event of the current slot threads
+        self._lock = threading.Lock()  # reload from the UI vs. the tray vs. stop
+
+    def start(self, cfg):
+        with self._lock:
+            if self.done.is_set():
+                return
+            if self.cfg:  # the old Device stops sending before the new one starts; no on_exit in between
+                self._stop.set()
+                self.cfg.device.halt()
+                # PicID must keep growing across Device objects, or the device drops the next uploads
+                cfg.device._last_id = max(cfg.device._last_id, self.cfg.device._last_id)
+            self.cfg, self._stop = cfg, threading.Event()
+            logging.getLogger().setLevel(cfg.level)
+            for s in cfg.slots:
+                threading.Thread(target=s.run, args=(cfg.device, self._stop), name=f"slot{s.number}",
+                                 daemon=True).start()
+        log.info("running slots %s on %s", ", ".join(str(s.number) for s in cfg.slots), cfg.device.url)
+
+    reload = start
+
+    def stop(self):
+        """Stop for good and send on_exit; safe to call more than once and from any thread."""
+        with self._lock:
+            self.done.set()
+            if self.cfg:
+                self._stop.set()
+                self.cfg.device.close()
+
+
+def run(runner):
+    """Block until Ctrl+C, console close, SIGTERM or runner.stop() (tray "Exit")."""
+    on_console_close(runner.stop)
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))  # e.g. systemd stop on a Pi -> finally below
-    log.info("running slots %s on %s", ", ".join(str(s.number) for s in slots), device.url)
     try:
-        while any(t.is_alive() for t in threads):
-            stop.wait(1)  # short waits keep Ctrl+C responsive on Windows
+        while not runner.done.wait(1):  # short waits keep Ctrl+C responsive on Windows
+            pass
     except KeyboardInterrupt:
         log.info("stopping")
     finally:
-        stop.set()
-        device.close()
+        runner.stop()

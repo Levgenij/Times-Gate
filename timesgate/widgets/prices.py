@@ -15,6 +15,10 @@ class Prices(Widget):
     type = "prices"
     # ALCH / SPY / BSB exist on Binance only as futures, not spot
     defaults = {"every": 300, "market": "futures", "quote": "USDT", "symbols": ["BTC", "ALCH", "SPY", "BSB"]}
+    label, about = "Ціни", "Останні ціни Binance, до 4 рядків"
+    choices = {"market": list(TICKERS)}
+    help = {"market": "futures — безстрокові ф'ючерси USDⓈ-M, spot — спот", "quote": "Валюта котирування",
+            "symbols": "Тікери без валюти котирування, 1–4"}
 
     def setup(self):
         if self.market not in TICKERS:

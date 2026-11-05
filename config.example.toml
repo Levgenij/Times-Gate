@@ -1,5 +1,7 @@
-# Copy to config.toml (gitignored) and edit. Values below are the defaults unless marked otherwise;
-# any option can be omitted. No secrets here: the Gmail token lives in token.json (gitignored).
+# Copy to config.toml (gitignored) and edit, or use the settings page (tray icon -> Налаштування).
+# Values below are the defaults unless marked otherwise; any option can be omitted.
+# Saving from the settings page rewrites config.toml without these comments.
+# No secrets here: the Gmail token lives in token.json (gitignored).
 
 [device]
 ip = "192.168.1.60"        # required; find it: POST https://app.divoom-gz.com/Device/ReturnSameLANDevice
@@ -25,6 +27,10 @@ cyrillic_font = "segoeui.ttf"   # any .ttf with Cyrillic; Segoe UI ships with Wi
 
 [log]
 level = "INFO"             # DEBUG also logs every send
+
+[ui]
+enabled = true             # settings page + tray icon
+port = 8765                # http://127.0.0.1:8765, this PC only; change takes effect after a restart
 
 # Each [[screen]] is one of the 5 panels (slot 1 = leftmost).
 # Its [[screen.widgets]] are a priority list: the slot shows the first widget that has something to show.
