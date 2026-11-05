@@ -10,7 +10,7 @@ from google.oauth2.credentials import Credentials
 
 from .base import ConfigError, Widget
 
-AUTH_HINT = "sign in: settings page -> Система, or python -m timesgate --google-auth"
+AUTH_HINT = "sign in: settings page -> System, or python -m timesgate --google-auth"
 SCOPE_REASONS = {"ACCESS_TOKEN_SCOPE_INSUFFICIENT", "insufficientPermissions"}  # the token lacks a permission
 _warned = set()  # token paths already reported missing
 
@@ -32,8 +32,8 @@ def google_error(r):
 class GoogleWidget(Widget):
     """Subclasses set `scopes` and put `client_secret` and `token` into their `defaults`."""
     scopes = []
-    help = {"client_secret": "OAuth-клієнт (Desktop app), шлях від config.toml, можна маску",
-            "token": "Створюється кнопкою «Увійти» на вкладці «Система»"}
+    help = {"client_secret": "OAuth client (Desktop app), path relative to config.toml, a mask is fine",
+            "token": "Created by the sign-in button on the System tab"}
 
     def setup(self):
         self.token_path = self.root / self.token

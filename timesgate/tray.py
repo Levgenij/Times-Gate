@@ -5,6 +5,7 @@ import webbrowser
 
 from PIL import Image, ImageDraw
 
+from .i18n import tr
 from .widgets import ConfigError
 
 log = logging.getLogger("timesgate.tray")
@@ -21,8 +22,9 @@ def icon_image():
     return img
 
 
-def start(url, runner, load):
-    """Show the icon in its own thread and return it; None where there is no tray (e.g. a Pi without a desktop)."""
+def start(url, runner, load, lang="en"):
+    """Show the icon in its own thread and return it; None where there is no tray (e.g. a Pi without a desktop).
+    The menu language is read once: a language change shows in the tray after a restart."""
     try:
         import pystray
 
@@ -33,9 +35,9 @@ def start(url, runner, load):
                 log.error("config error: %s", e)
 
         icon = pystray.Icon("timesgate", icon_image(), "Times Gate", pystray.Menu(
-            pystray.MenuItem("Налаштування", lambda: webbrowser.open(url), default=True),
-            pystray.MenuItem("Оновити екрани", redraw),
-            pystray.MenuItem("Вихід", runner.stop)))  # __main__ then removes the icon
+            pystray.MenuItem(tr("Settings", lang), lambda: webbrowser.open(url), default=True),
+            pystray.MenuItem(tr("Refresh screens", lang), redraw),
+            pystray.MenuItem(tr("Exit", lang), runner.stop)))  # __main__ then removes the icon
     except Exception as e:  # no display / backend: run without a tray
         log.info("no tray icon: %s", e)
         return None

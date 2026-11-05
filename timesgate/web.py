@@ -12,7 +12,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from . import config
+from . import config, i18n
 from .device import Device
 from .render import Theme
 from .widgets import REGISTRY, ConfigError, Widget
@@ -66,7 +66,8 @@ def schema():
             for k, v in {"every": 60, "retry": None, "align": False, **cls.defaults}.items()]}
     device = {k: p.default for k, p in inspect.signature(Device).parameters.items() if k not in ("ip", "on_exit")}
     return {"widgets": widgets, "theme": dataclasses.asdict(Theme()), "device": device,
-            "levels": ["DEBUG", "INFO", "WARNING", "ERROR"], "ui": config.UI_DEFAULTS}
+            "levels": ["DEBUG", "INFO", "WARNING", "ERROR"], "ui": config.UI_DEFAULTS,
+            "languages": list(i18n.LANGUAGES), "uk": i18n.UK}  # the page translates its English texts itself
 
 
 def autostart_command(path):
@@ -98,7 +99,7 @@ def _errors(slot):
 
 
 def _google(cfg):
-    """Sign-in state per Google token file, for the "Система" tab."""
+    """Sign-in state per Google token file, for the "Система" (System) tab."""
     # type(w).label: the instance attribute may be an option of the same name (gmail's `label` = "INBOX")
     return {w.token: {"label": type(w).label, "authorized": w.token_path.exists(), "active": w.session is not None}
             for w in config.google_widgets(cfg)}

@@ -188,7 +188,7 @@ textarea { resize: vertical; }
 </style>
 </head>
 <body>
-<div id="app"><div class="boot">Завантаження…</div></div>
+<div id="app"><div class="boot">Loading…</div></div>
 
 <script type="text/x-template" id="app-tpl">
 <header class="top">
@@ -201,32 +201,32 @@ textarea { resize: vertical; }
   </div>
   <span class="pill" :title="status?.device.url">
     <span class="dot" :class="!alive ? 'err' : status ? (status.device.online ? 'ok' : 'err') : ''"></span>
-    {{ !alive ? 'Програма не відповідає' : !status ? '…' : status.device.online ? 'Пристрій на зв’язку' : 'Пристрій недоступний' }}
+    {{ !alive ? t('App not responding') : !status ? '…' : status.device.online ? t('Device online') : t('Device unreachable') }}
   </span>
   <nav class="tabs" role="tablist">
-    <button v-for="t in tabs" :key="t.id" role="tab" :aria-selected="tab === t.id" :class="{ on: tab === t.id }"
-            @click="tab = t.id">{{ t.label }}</button>
+    <button v-for="tb in tabs" :key="tb.id" role="tab" :aria-selected="tab === tb.id" :class="{ on: tab === tb.id }"
+            @click="tab = tb.id">{{ t(tb.label) }}</button>
   </nav>
   <div class="spacer"></div>
-  <span v-if="dirty" class="unsaved"><span class="dot" style="background: var(--accent)"></span>Є незбережені зміни</span>
-  <button class="btn ghost" :disabled="!dirty || saving" @click="revert">Скасувати</button>
-  <button class="btn primary" :disabled="!dirty || saving" @click="save" title="Ctrl+S">{{ saving ? 'Зберігаю…' : 'Зберегти' }}</button>
+  <span v-if="dirty" class="unsaved"><span class="dot" style="background: var(--accent)"></span>{{ t('Unsaved changes') }}</span>
+  <button class="btn ghost" :disabled="!dirty || saving" @click="revert">{{ t('Cancel') }}</button>
+  <button class="btn primary" :disabled="!dirty || saving" @click="save" title="Ctrl+S">{{ saving ? t('Saving…') : t('Save') }}</button>
 </header>
 
 <main v-if="draft">
   <div v-if="error" class="banner" role="alert">
-    <div><b>Не збережено.</b> {{ error }}</div>
-    <button class="btn small" @click="error = ''">Закрити</button>
+    <div><b>{{ t('Not saved.') }}</b> {{ error }}</div>
+    <button class="btn small" @click="error = ''">{{ t('Close') }}</button>
   </div>
 
   <!-- SCREENS -->
   <template v-if="tab === 'screens'">
-    <div class="device" role="listbox" aria-label="Екрани пристрою">
+    <div class="device" role="listbox" :aria-label="t('Device screens')">
       <button v-for="n in 5" :key="n" class="panel" :class="{ on: sel === n }" role="option" :aria-selected="sel === n"
               @click="sel = n">
         <div class="screen">
-          <img v-if="live(n)?.sent_at" :src="'/api/screen/' + n + '.png?v=' + live(n).sent_at" :alt="'Екран ' + n">
-          <div v-else class="empty">{{ widgetsOf(n).length ? 'ще нічого не надіслано' : 'не налаштовано' }}</div>
+          <img v-if="live(n)?.sent_at" :src="'/api/screen/' + n + '.png?v=' + live(n).sent_at" :alt="t('Screen') + ' ' + n">
+          <div v-else class="empty">{{ widgetsOf(n).length ? t('nothing sent yet') : t('not configured') }}</div>
         </div>
         <div class="pmeta">
           <span class="num">{{ n }}</span>
@@ -241,8 +241,8 @@ textarea { resize: vertical; }
       <section>
         <div class="ed-head">
           <div>
-            <h2>Екран {{ sel }}</h2>
-            <p class="sub">Віджети за пріоритетом: на екрані перший, якому зараз є що показати.</p>
+            <h2>{{ t('Screen') }} {{ sel }}</h2>
+            <p class="sub">{{ t('Widgets by priority: the screen shows the first one that has something to show now.') }}</p>
           </div>
         </div>
 
@@ -252,69 +252,69 @@ textarea { resize: vertical; }
                @dragover.prevent="dragOver = i" @dragleave="dragOver = null" @drop="drop(i)">
             <div class="whead" draggable="true" @dragstart="dragFrom = i" @dragend="dragFrom = dragOver = null"
                  @click="toggle(w)">
-              <span class="grip" title="Перетягніть, щоб змінити пріоритет">⠿</span>
+              <span class="grip" :title="t('Drag to change the priority')">⠿</span>
               <span class="prio">{{ i + 1 }}</span>
               <div class="wtitle">
                 <b>{{ label(w.type) }}</b>
                 <span>{{ summary(w) }}</span>
               </div>
-              <button class="icon-btn" :disabled="i === 0" @click.stop="move(i, -1)" aria-label="Вище">↑</button>
-              <button class="icon-btn" :disabled="i === widgetsOf(sel).length - 1" @click.stop="move(i, 1)" aria-label="Нижче">↓</button>
-              <button class="icon-btn danger" @click.stop="remove(i)" aria-label="Видалити віджет">✕</button>
+              <button class="icon-btn" :disabled="i === 0" @click.stop="move(i, -1)" :aria-label="t('Up')">↑</button>
+              <button class="icon-btn" :disabled="i === widgetsOf(sel).length - 1" @click.stop="move(i, 1)" :aria-label="t('Down')">↓</button>
+              <button class="icon-btn danger" @click.stop="remove(i)" :aria-label="t('Remove widget')">✕</button>
               <span class="chev" :class="{ open: isOpen(w) }">›</span>
             </div>
             <div v-if="isOpen(w)" class="wbody">
               <template v-if="schema.widgets[w.type]">
-                <div class="group">Параметри</div>
+                <div class="group">{{ t('Options') }}</div>
                 <div class="fields">
                   <option-field v-for="o in own(w)" :key="o.name" :opt="o" :model="w"></option-field>
                 </div>
-                <div class="group">Розклад</div>
+                <div class="group">{{ t('Schedule') }}</div>
                 <div class="fields">
                   <option-field v-for="o in sched(w)" :key="o.name" :opt="o" :model="w"></option-field>
                 </div>
               </template>
-              <p v-else class="hint">Невідомий тип «{{ w.type }}».</p>
+              <p v-else class="hint">{{ t('Unknown type') }} «{{ w.type }}».</p>
             </div>
           </div>
 
           <div v-if="!widgetsOf(sel).length && !picking" class="card empty-slot">
-            На цьому екрані нічого немає. Додайте віджет — і він з’явиться на пристрої після збереження.
+            {{ t('Nothing on this screen. Add a widget and it appears on the device after saving.') }}
           </div>
 
           <div v-if="picking" class="card">
             <div class="picker">
               <button v-for="(s, t) in schema.widgets" :key="t" class="pick" @click="add(t)">
-                <b>{{ s.label }}</b><span>{{ s.about }}</span>
+                <b>{{ t(s.label) }}</b><span>{{ t(s.about) }}</span>
               </button>
             </div>
-            <div style="padding: 0 12px 12px; text-align: right"><button class="btn ghost small" @click="picking = false">Скасувати</button></div>
+            <div style="padding: 0 12px 12px; text-align: right"><button class="btn ghost small" @click="picking = false">{{ t('Cancel') }}</button></div>
           </div>
-          <button v-else class="add" @click="picking = true">+ Додати віджет</button>
+          <button v-else class="add" @click="picking = true">{{ t('+ Add widget') }}</button>
         </div>
       </section>
 
       <aside class="card pv" aria-live="polite">
-        <h3>Прев’ю <span v-if="preview.loading" class="spin"></span>
-          <button class="btn ghost small" @click="runPreview(sel)" :disabled="preview.loading">Оновити</button></h3>
+        <h3>{{ t('Preview') }} <span v-if="preview.loading" class="spin"></span>
+          <button class="btn ghost small" @click="runPreview(sel)" :disabled="preview.loading">{{ t('Refresh') }}</button></h3>
         <div class="pv-pair">
           <figure>
             <div class="screen">
               <img v-if="live(sel)?.sent_at" :src="'/api/screen/' + sel + '.png?v=' + live(sel).sent_at" alt="">
               <div v-else class="empty">—</div>
             </div>
-            <figcaption>на пристрої</figcaption>
+            <figcaption>{{ t('on the device') }}</figcaption>
           </figure>
           <figure>
             <div class="screen">
               <img v-if="preview.frames.length" :src="'data:image/png;base64,' + preview.frames[preview.idx % preview.frames.length]" alt="">
-              <div v-else class="empty">{{ preview.loading ? '' : 'нічого показати' }}</div>
+              <div v-else class="empty">{{ preview.loading ? '' : t('nothing to show') }}</div>
             </div>
-            <figcaption>чернетка</figcaption>
+            <figcaption>{{ t('draft') }}</figcaption>
           </figure>
         </div>
-        <p class="pv-note" v-if="preview.widget">Показується: <b>{{ label(preview.widget) }}</b>{{ preview.frames.length > 1 ? ' · анімація ' + preview.frames.length + ' кадри' : '' }}</p>
-        <p class="pv-note">Прев’ю бере свіжі дані з інтернету й нічого не надсилає на пристрій.</p>
+        <p class="pv-note" v-if="preview.widget">{{ t('Showing:') }} <b>{{ label(preview.widget) }}</b>{{ preview.frames.length > 1 ? ' · ' + t('animation') + ', ' + preview.frames.length + ' ' + t('frames') : '' }}</p>
+        <p class="pv-note">{{ t('The preview takes fresh data from the internet and sends nothing to the device.') }}</p>
         <div v-for="(e, t) in preview.errors" :key="t" class="pv-err"><b>{{ label(t) }}:</b> {{ e }}</div>
         <div v-if="preview.error" class="pv-err">{{ preview.error }}</div>
       </aside>
@@ -324,25 +324,25 @@ textarea { resize: vertical; }
   <!-- DEVICE -->
   <template v-if="tab === 'device'">
     <section class="card section">
-      <header><h2>Підключення</h2><p class="sub">Локальний HTTP API Times Gate.</p></header>
+      <header><h2>{{ t('Connection') }}</h2><p class="sub">{{ t('Times Gate local HTTP API.') }}</p></header>
       <div class="fields">
         <option-field v-for="o in deviceOpts" :key="o.name" :opt="o" :model="draft.device"></option-field>
       </div>
     </section>
     <section class="card section">
-      <header><h2>Коли програма зупиняється</h2>
-        <p class="sub">Команда при виході з трею, Ctrl+C чи закритті консолі. Не надсилається, якщо комп’ютер вимкнувся, заснув або процес убито.</p></header>
+      <header><h2>{{ t('When the program stops') }}</h2>
+        <p class="sub">{{ t('Command sent on tray Exit, Ctrl+C or closing the console. Not sent if the PC shuts down, sleeps or the process is killed.') }}</p></header>
       <div class="radios" role="radiogroup">
         <label v-for="m in exitModes" :key="m.id" class="radio" :class="{ on: exitMode === m.id }">
-          <input type="radio" name="exit" :checked="exitMode === m.id" @change="setExitMode(m.id)">{{ m.label }}
+          <input type="radio" name="exit" :checked="exitMode === m.id" @change="setExitMode(m.id)">{{ t(m.label) }}
         </label>
       </div>
       <div class="fields" style="margin-top: 14px" v-if="exitMode === 'clock'">
-        <option-field :opt="{ name: 'ClockId', kind: 'number', default: 581, help: 'Номер циферблата', required: true }"
+        <option-field :opt="{ name: 'ClockId', kind: 'number', default: 581, help: 'Clock face number', required: true }"
                       :model="draft.device.on_exit"></option-field>
       </div>
       <div class="field" style="margin-top: 14px" v-if="exitMode === 'custom'">
-        <span class="flabel">Команда у JSON <code>on_exit</code></span>
+        <span class="flabel">{{ t('Command as JSON') }} <code>on_exit</code></span>
         <textarea rows="3" class="mono" :value="exitText" @change="setExitText($event.target.value)"></textarea>
         <span v-if="exitError" class="hint" style="color: var(--err)">{{ exitError }}</span>
       </div>
@@ -353,13 +353,13 @@ textarea { resize: vertical; }
   <template v-if="tab === 'theme'">
     <div class="two">
       <section class="card section">
-        <header><h2>Кольори</h2><p class="sub">Спільні для всіх екранів.</p></header>
+        <header><h2>{{ t('Colours') }}</h2><p class="sub">{{ t('Shared by all screens.') }}</p></header>
         <div class="fields">
           <option-field v-for="o in themeOpts" :key="o.name" :opt="o" :model="draft.theme"></option-field>
         </div>
       </section>
       <aside class="card pv pv-big">
-        <h3>Прев’ю <span v-if="preview.loading" class="spin"></span></h3>
+        <h3>{{ t('Preview') }} <span v-if="preview.loading" class="spin"></span></h3>
         <div class="radios" style="margin-bottom: 12px">
           <label v-for="n in configured" :key="n" class="radio" :class="{ on: themeSlot === n }">
             <input type="radio" name="ts" :checked="themeSlot === n" @change="themeSlot = n">{{ n }}
@@ -367,7 +367,7 @@ textarea { resize: vertical; }
         </div>
         <div class="screen">
           <img v-if="preview.frames.length" :src="'data:image/png;base64,' + preview.frames[preview.idx % preview.frames.length]" alt="">
-          <div v-else class="empty">{{ preview.loading ? '' : 'нічого показати' }}</div>
+          <div v-else class="empty">{{ preview.loading ? '' : t('nothing to show') }}</div>
         </div>
         <div v-if="preview.error" class="pv-err">{{ preview.error }}</div>
       </aside>
@@ -377,35 +377,36 @@ textarea { resize: vertical; }
   <!-- SYSTEM -->
   <template v-if="tab === 'system'">
     <section class="card section">
-      <header><h2>Програма</h2></header>
+      <header><h2>{{ t('Program') }}</h2></header>
       <div class="row">
-        <div class="grow"><b>Запускати при вході в Windows</b>
-          <span class="hint">Без вікна консолі, з іконкою в треї. Якщо перенесли папку — увімкніть ще раз.</span></div>
-        <span v-if="autostart === null" class="hint">лише Windows</span>
+        <div class="grow"><b>{{ t('Start with Windows') }}</b>
+          <span class="hint">{{ t('No console window, with a tray icon. If you moved the folder, switch it on again.') }}</span></div>
+        <span v-if="autostart === null" class="hint">{{ t('Windows only') }}</span>
         <span v-else class="switch"><input type="checkbox" :checked="autostart" @change="setAutostart($event.target.checked)"
-              aria-label="Автозапуск"><i></i></span>
+              :aria-label="t('Autostart')"><i></i></span>
       </div>
       <div v-for="(g, token) in status?.google" :key="token" class="row">
-        <div class="grow"><b>Google: {{ g.label }}</b> <span class="mono hint">{{ token }}</span>
-          <span class="hint">{{ g.active ? 'Підключено.' : g.authorized ? 'Токен є, але не працює — увійдіть ще раз.'
-            : 'Не підключено. Потрібен secrets/client_secret*.json і увімкнений API в Google Cloud.' }}</span></div>
-        <button class="btn" @click="googleAuth(token)">{{ g.authorized ? 'Увійти знову' : 'Увійти' }}</button>
+        <div class="grow"><b>Google: {{ t(g.label) }}</b> <span class="mono hint">{{ token }}</span>
+          <span class="hint">{{ g.active ? t('Connected.') : g.authorized ? t('There is a token, but it doesn\'t work: sign in again.')
+            : t('Not connected. Needs secrets/client_secret*.json and the API enabled in Google Cloud.') }}</span></div>
+        <button class="btn" @click="googleAuth(token)">{{ g.authorized ? t('Sign in again') : t('Sign in') }}</button>
       </div>
       <div v-if="status && !Object.keys(status.google).length" class="row">
-        <div class="grow"><b>Google</b><span class="hint">Віджетів Gmail чи Календаря немає на жодному екрані.</span></div>
+        <div class="grow"><b>Google</b><span class="hint">{{ t('No Gmail or Calendar widget on any screen.') }}</span></div>
       </div>
       <div class="row">
         <div class="grow" style="max-width: 520px"><div class="fields">
           <option-field :opt="levelOpt" :model="draft.log"></option-field>
           <option-field :opt="portOpt" :model="draft.ui"></option-field>
+          <option-field :opt="langOpt" :model="draft.ui"></option-field>
         </div></div>
       </div>
-      <p class="hint" style="margin: 8px 0 0">Конфігурація: <span class="mono">{{ path }}</span>. Попередня версія зберігається як <span class="mono">config.toml.bak</span>.</p>
+      <p class="hint" style="margin: 8px 0 0">{{ t('Config:') }} <span class="mono">{{ path }}</span>. {{ t('The previous version is kept as') }} <span class="mono">config.toml.bak</span>.</p>
     </section>
     <section class="card section">
-      <header style="display: flex; align-items: flex-end"><div><h2>Журнал</h2><p class="sub">Останні 300 рядків.</p></div></header>
+      <header style="display: flex; align-items: flex-end"><div><h2>{{ t('Log') }}</h2><p class="sub">{{ t('The last 300 lines.') }}</p></div></header>
       <div class="log mono" ref="logBox"><div v-for="(l, i) in logs" :key="i" :class="logClass(l)">{{ l }}</div>
-        <div v-if="!logs.length" class="d">Порожньо.</div></div>
+        <div v-if="!logs.length" class="d">{{ t('Empty.') }}</div></div>
     </section>
   </template>
 </main>
@@ -415,6 +416,10 @@ textarea { resize: vertical; }
 
 <script type="module">
 import { createApp, ref, reactive, computed, watch, nextTick, onMounted } from '/vue.js'
+
+// Texts are English; with [ui] language = "uk" they come from i18n.UK, sent by the server with the schema.
+const i18n = reactive({ lang: 'en', uk: {} })
+const t = s => (i18n.lang === 'uk' && i18n.uk[s]) || s
 
 async function api(method, url, body) {
   const opts = { method }
@@ -429,7 +434,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 function duration(s) {
   if (!s || s < 60) return ''
   const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60)
-  return '≈ ' + (h ? h + ' год' + (m ? ' ' + m + ' хв' : '') : m + ' хв')
+  return '≈ ' + (h ? h + ' ' + t('hr') + (m ? ' ' + m + ' ' + t('min') : '') : m + ' ' + t('min'))
 }
 
 const ChipsInput = {
@@ -449,7 +454,7 @@ const ChipsInput = {
     },
   },
   template: `<div class="chips" @click="$refs.inp.focus()">
-    <span v-for="(c, i) in modelValue" :key="i + c" class="chip">{{ c }}<button type="button" @click.stop="remove(i)" :aria-label="'Прибрати ' + c">×</button></span>
+    <span v-for="(c, i) in modelValue" :key="i + c" class="chip">{{ c }}<button type="button" @click.stop="remove(i)" :aria-label="t('Remove') + ' ' + c">×</button></span>
     <input ref="inp" v-model="text" @keydown="key" @blur="add" :placeholder="modelValue.length ? '' : placeholder">
   </div>`,
 }
@@ -473,14 +478,14 @@ const OptionField = {
     reset() { delete this.model[this.opt.name] },
   },
   template: `<div class="field" :class="{ wide: opt.kind === 'list' || multiline, changed }">
-    <span class="flabel">{{ opt.help || opt.name }}<span v-if="opt.required" class="req">*</span> <code>{{ opt.name }}</code>
-      <button v-if="changed && !opt.required" type="button" class="reset" @click="reset" title="Повернути типове значення">↺</button></span>
-    <span v-if="opt.kind === 'bool'" class="switch"><input type="checkbox" :checked="value" @change="set($event.target.checked)" :aria-label="opt.help || opt.name"><i></i></span>
+    <span class="flabel">{{ t(opt.help || opt.name) }}<span v-if="opt.required" class="req">*</span> <code>{{ opt.name }}</code>
+      <button v-if="changed && !opt.required" type="button" class="reset" @click="reset" :title="t('Reset to default')">↺</button></span>
+    <span v-if="opt.kind === 'bool'" class="switch"><input type="checkbox" :checked="value" @change="set($event.target.checked)" :aria-label="t(opt.help || opt.name)"><i></i></span>
     <select v-else-if="opt.kind === 'choice'" :value="value" @change="set($event.target.value)" :aria-label="opt.name">
       <option v-for="c in opt.choices" :key="c" :value="c">{{ c }}</option></select>
     <input v-else-if="opt.kind === 'number'" type="number" step="any" :value="value ?? ''"
-           :placeholder="opt.default ?? 'як every'" @input="setNum" :aria-label="opt.name">
-    <chips-input v-else-if="opt.kind === 'list'" :model-value="value" @update:model-value="set" placeholder="Введіть і натисніть Enter"></chips-input>
+           :placeholder="opt.default ?? t('same as every')" @input="setNum" :aria-label="opt.name">
+    <chips-input v-else-if="opt.kind === 'list'" :model-value="value" @update:model-value="set" :placeholder="t('Type and press Enter')"></chips-input>
     <span v-else-if="opt.kind === 'color'" class="color">
       <input type="color" :value="value" @input="set($event.target.value)" :aria-label="opt.name">
       <input type="text" :value="value" @change="set($event.target.value.trim())" class="mono"></span>
@@ -491,24 +496,24 @@ const OptionField = {
 }
 
 const THEME_LABELS = {
-  background: 'Фон', text: 'Основний текст', muted: 'Підписи', dim: 'Нижній рядок (час, дата)',
-  up: 'Ріст (лінія графіка)', down: 'Падіння', up_fill: 'Заливка під ростом', down_fill: 'Заливка під падінням',
-  cyrillic_font: 'Шрифт із кирилицею (.ttf)',
+  background: 'Background', text: 'Main text', muted: 'Labels', dim: 'Bottom line (time, date)',
+  up: 'Rise (chart line)', down: 'Fall', up_fill: 'Fill under a rise', down_fill: 'Fill under a fall',
+  cyrillic_font: 'Font with Cyrillic (.ttf)',
 }
 const DEVICE_LABELS = {
-  port: 'Порт', path: 'Шлях API', timeout: 'Тайм-аут запиту, секунд', jpeg_quality: 'Якість JPEG, 1–100',
+  port: 'Port', path: 'API path', timeout: 'Request timeout, seconds', jpeg_quality: 'JPEG quality, 1–100',
 }
 const CLOCK_CMD = 'Channel/Set5LcdWholeClockId'
 
-createApp({
+const app = createApp({
   template: '#app-tpl',
   components: { OptionField },
   setup() {
     const schema = ref(null), draft = ref(null), saved = ref(''), path = ref('')
     const status = ref(null), alive = ref(true)
     const tab = ref('screens'), sel = ref(3), themeSlot = ref(3)
-    const tabs = [{ id: 'screens', label: 'Екрани' }, { id: 'device', label: 'Пристрій' },
-                  { id: 'theme', label: 'Тема' }, { id: 'system', label: 'Система' }]
+    const tabs = [{ id: 'screens', label: 'Screens' }, { id: 'device', label: 'Device' },
+                  { id: 'theme', label: 'Theme' }, { id: 'system', label: 'System' }]
     const error = ref(''), toast = ref(''), saving = ref(false), picking = ref(false)
     const autostart = ref(null), logs = ref([]), logBox = ref(null)
     const dragFrom = ref(null), dragOver = ref(null)
@@ -517,13 +522,13 @@ createApp({
     const preview = reactive({ frames: [], speed: 100, widget: null, errors: {}, error: '', loading: false, idx: 0 })
 
     const dirty = computed(() => !!draft.value && JSON.stringify(draft.value) !== saved.value)
-    const label = t => schema.value?.widgets[t]?.label || t
+    const label = type => t(schema.value?.widgets[type]?.label || type)
     const screenOf = n => draft.value.screen.find(s => s.slot === n)
     const widgetsOf = n => screenOf(n)?.widgets || []
     const configured = computed(() => draft.value.screen.map(s => s.slot).sort())
     const live = n => status.value?.slots.find(s => s.slot === n)
-    const chain = n => widgetsOf(n).map(w => label(w.type)).join(' → ') || 'порожньо'
-    const errorsText = s => s && Object.entries(s.errors).map(([t, e]) => label(t) + ': ' + e).join('; ')
+    const chain = n => widgetsOf(n).map(w => label(w.type)).join(' → ') || t('empty')
+    const errorsText = s => s && Object.entries(s.errors).map(([type, e]) => label(type) + ': ' + e).join('; ')
     const keyOf = w => { if (!ids.has(w)) ids.set(w, ++nextId); return ids.get(w) }
     const isOpen = w => opened.has(keyOf(w))
     const toggle = w => { const k = keyOf(w); opened.has(k) ? opened.delete(k) : opened.add(k) }
@@ -533,13 +538,13 @@ createApp({
     function summary(w) {
       const parts = own(w).filter(o => o.name in w && !same(w[o.name], o.default))
         .map(o => Array.isArray(w[o.name]) ? w[o.name].join(', ') : String(w[o.name]).replace(/\n/g, ' '))
-      return (parts.join(' · ') || schema.value.widgets[w.type]?.about || '') + (w.every ? ' · кожні ' + (duration(w.every).slice(2) || w.every + ' с') : '')
+      return (parts.join(' · ') || t(schema.value.widgets[w.type]?.about || '')) + (w.every ? ' · ' + t('every') + ' ' + (duration(w.every).slice(2) || w.every + ' ' + t('s')) : '')
     }
     function ago(ts) {
       const d = Date.now() / 1000 - ts
-      if (d < 60) return 'щойно'
-      if (d < 3600) return Math.floor(d / 60) + ' хв тому'
-      return new Date(ts * 1000).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+      if (d < 60) return t('just now')
+      if (d < 3600) return Math.floor(d / 60) + ' ' + t('min ago')
+      return new Date(ts * 1000).toLocaleTimeString(i18n.lang === 'uk' ? 'uk-UA' : 'en-GB', { hour: '2-digit', minute: '2-digit' })
     }
 
     function add(type) {
@@ -568,15 +573,16 @@ createApp({
 
     // device / theme / system forms reuse OptionField with hand-made option descriptions
     const deviceOpts = computed(() => [
-      { name: 'ip', kind: 'text', default: '', help: 'IP-адреса пристрою', required: true },
+      { name: 'ip', kind: 'text', default: '', help: 'Device IP address', required: true },
       ...Object.entries(schema.value.device).map(([k, v]) => ({ name: k, default: v, kind: typeof v === 'number' ? 'number' : 'text', help: DEVICE_LABELS[k] })),
     ])
     const themeOpts = computed(() => Object.entries(schema.value.theme).map(([k, v]) =>
       ({ name: k, default: v, kind: k === 'cyrillic_font' ? 'text' : 'color', help: THEME_LABELS[k] })))
-    const levelOpt = computed(() => ({ name: 'level', kind: 'choice', choices: schema.value.levels, default: 'INFO', help: 'Рівень журналу' }))
-    const portOpt = computed(() => ({ name: 'port', kind: 'number', default: schema.value.ui.port, help: 'Порт цієї сторінки (після перезапуску програми)' }))
+    const levelOpt = computed(() => ({ name: 'level', kind: 'choice', choices: schema.value.levels, default: 'INFO', help: 'Log level' }))
+    const portOpt = computed(() => ({ name: 'port', kind: 'number', default: schema.value.ui.port, help: 'Port of this page (after a program restart)' }))
+    const langOpt = computed(() => ({ name: 'language', kind: 'choice', choices: schema.value.languages, default: schema.value.ui.language, help: 'Language (screens and this page; tray after a restart)' }))
 
-    const exitModes = [{ id: 'none', label: 'Нічого не робити' }, { id: 'clock', label: 'Увімкнути вбудований годинник' }, { id: 'custom', label: 'Своя команда' }]
+    const exitModes = [{ id: 'none', label: 'Do nothing' }, { id: 'clock', label: 'Switch on the built-in clock' }, { id: 'custom', label: 'Custom command' }]
     const exitError = ref(''), exitCustom = ref(false)
     const isClock = e => e.Command === CLOCK_CMD && Object.keys(e).length === 2 && 'ClockId' in e
     const exitMode = computed(() => {
@@ -595,9 +601,9 @@ createApp({
     function setExitText(t) {
       try {
         const v = JSON.parse(t)
-        if (typeof v !== 'object' || !v || typeof v.Command !== 'string') throw new Error('потрібен об’єкт з полем "Command"')
+        if (typeof v !== 'object' || !v || typeof v.Command !== 'string') throw new Error(t('needs an object with a "Command" field'))
         draft.value.device.on_exit = v; exitError.value = ''
-      } catch (e) { exitError.value = 'Не застосовано: ' + e.message }
+      } catch (e) { exitError.value = t('Not applied:') + ' ' + e.message }
     }
 
     // preview of the draft: debounced, newest request wins
@@ -636,6 +642,7 @@ createApp({
       for (const k of ['device', 'theme', 'log', 'ui']) c[k] ??= {}
       c.screen ??= []
       schema.value = r.schema; path.value = r.path
+      i18n.uk = r.schema.uk; i18n.lang = c.ui.language || r.schema.ui.language
       draft.value = c; saved.value = JSON.stringify(c)
     }
     async function save() {
@@ -644,7 +651,8 @@ createApp({
       try {
         await api('PUT', '/api/config', draft.value)
         saved.value = JSON.stringify(draft.value)
-        flash('Збережено. Екрани оновлюються…')
+        i18n.lang = draft.value.ui.language || schema.value.ui.language
+        flash(t('Saved. Screens are updating…'))
         setTimeout(poll, 1500)
       } catch (e) { error.value = e.message }
       finally { saving.value = false }
@@ -668,17 +676,17 @@ createApp({
     async function setAutostart(on) {
       try {
         autostart.value = (await api('PUT', '/api/autostart', { enabled: on })).enabled
-        flash(on ? 'Автозапуск увімкнено' : 'Автозапуск вимкнено')
+        flash(on ? t('Autostart on') : t('Autostart off'))
       } catch (e) { error.value = e.message; loadAutostart() }
     }
     async function googleAuth(token) {
-      try { await api('POST', '/api/google-auth', { token }); flash('Відкрився браузер — увійдіть у Google і дозвольте доступ') }
+      try { await api('POST', '/api/google-auth', { token }); flash(t('A browser opened: sign in to Google and allow access')) }
       catch (e) { error.value = e.message }
     }
     const logClass = l => / (WARNING) /.test(l) ? 'w' : / (ERROR|CRITICAL) /.test(l) ? 'e' : / DEBUG /.test(l) ? 'd' : ''
 
     onMounted(async () => {
-      try { await load() } catch (e) { error.value = 'Не вдалося завантажити конфігурацію: ' + e.message }
+      try { await load() } catch (e) { error.value = t('Could not load the config:') + ' ' + e.message }
       poll(); setInterval(poll, 3000)
       if (!screenOf(sel.value) && draft.value?.screen.length) sel.value = draft.value.screen[0].slot
       themeSlot.value = sel.value
@@ -688,10 +696,12 @@ createApp({
 
     return { schema, draft, path, status, alive, tab, tabs, sel, themeSlot, error, toast, saving, picking, autostart, logs, logBox,
              dragFrom, dragOver, preview, dirty, label, widgetsOf, configured, live, chain, errorsText, keyOf, isOpen, toggle,
-             own, sched, summary, ago, add, remove, move, drop, deviceOpts, themeOpts, levelOpt, portOpt, exitModes, exitMode,
+             own, sched, summary, ago, add, remove, move, drop, deviceOpts, themeOpts, levelOpt, portOpt, langOpt, t, exitModes, exitMode,
              exitText, exitError, setExitMode, setExitText, runPreview, save, revert, setAutostart, googleAuth, logClass }
   },
-}).mount('#app')
+})
+app.config.globalProperties.t = t  // child components' templates use t() too
+app.mount('#app')
 </script>
 </body>
 </html>

@@ -6,9 +6,9 @@ class Text(Widget):
     """Static centred text (the original Hello World)."""
     type = "text"
     defaults = {"every": 3600, "text": "Hello\nWorld", "size": 22, "cyrillic": False}
-    label, about = "Текст", "Статичний текст по центру"
-    help = {"text": "Можна в кілька рядків", "size": "Розмір шрифту, px",
-            "cyrillic": "Шрифт з кирилицею з теми (стандартний її не має)"}
+    label, about = "Text", "Static centred text"
+    help = {"text": "Several lines are fine", "size": "Font size, px",
+            "cyrillic": "Cyrillic font from the theme (the default one has none)"}
 
     def frames(self):
         img, d = canvas(self.theme)

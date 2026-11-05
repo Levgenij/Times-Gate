@@ -74,9 +74,9 @@ class WebTest(unittest.TestCase):
         code, body = self.call("GET", "/api/status")
         off = {"authorized": False, "active": False}
         self.assertEqual(body["google"], {  # one sign-in per token file; the 2nd default calendar shares the 1st
-            "secrets/token_calendar.json": {"label": "Календар", **off},
+            "secrets/token_calendar.json": {"label": "Calendar", **off},
             "secrets/token_gmail.json": {"label": "Gmail", **off},  # not its `label` option, "INBOX"
-            "token_work.json": {"label": "Календар", **off}})
+            "token_work.json": {"label": "Calendar", **off}})
         self.assertEqual(self.call("POST", "/api/google-auth", {"token": "nope.json"})[0], 400)
 
     def test_other_sites_are_refused(self):

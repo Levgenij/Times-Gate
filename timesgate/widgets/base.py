@@ -15,15 +15,15 @@ class Widget:
     type = ""       # name used in config.toml
     defaults = {}   # widget options and their default values
     speed = 100     # ms per frame when frames() returns an animation
-    # Settings UI only (Ukrainian, like the UI): name, one-line description, per-option hints and drop-down values.
+    # Settings UI only (English; Ukrainian in i18n.UK): name, one-line description, per-option hints, drop-down values.
     label = ""
     about = ""
     help = {}
     choices = {}
     common_help = {
-        "every": "Як часто оновлювати, секунд",
-        "retry": "Повтор після помилки, секунд (порожньо = як «every»)",
-        "align": "Оновлювати рівно на межі інтервалу, напр. на початку хвилини",
+        "every": "How often to refresh, seconds",
+        "retry": "Retry after an error, seconds (empty = same as every)",
+        "align": "Refresh exactly on the interval boundary, e.g. at the start of a minute",
     }
 
     def __init__(self, ctx, **opts):
@@ -39,6 +39,7 @@ class Widget:
             if value is not None and (not isinstance(value, (int, float)) or value <= 0):
                 raise ConfigError(f"{self.type}: {key} must be a positive number of seconds")
         self.theme, self.root = ctx.theme, ctx.root  # root: folder of config.toml, for widget files
+        self.words = ctx.words  # on-screen words of the configured language (i18n.WORDS)
         self.log = logging.getLogger(f"timesgate.{self.type}")
         self.http = requests.Session()  # per widget: each widget runs only in its own slot thread
         self.setup()

@@ -17,7 +17,7 @@ def decide(prev, count, showing):
 
 
 def plural(n, forms):
-    """Ukrainian form for n: (1 непрочитаний, 2-4 непрочитані, 5+ / 11-14 непрочитаних)."""
+    """Form for n by Ukrainian rules: 1 / 2-4 / 5+ (11-14 count as 5+); with three equal English forms it is a no-op."""
     if n % 10 == 1 and n % 100 != 11:
         return forms[0]
     if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
@@ -34,13 +34,14 @@ class Gmail(GoogleWidget):
         "label": "INBOX",                        # CATEGORY_PERSONAL = the "Primary" tab only
         "client_secret": "secrets/client_secret*.json",  # glob, relative to config.toml
         "token": "secrets/token_gmail.json",             # written by "sign in"
-        "forms": ["непрочитаний", "непрочитані", "непрочитаних"],  # for 1 / 2-4 / 5+
+        "forms": [],  # word for 1 / 2-4 / 5+ messages; empty = the configured language's (i18n.WORDS)
     }
-    label, about = "Gmail", "Кількість непрочитаних; показується, лише коли їх стало більше"
-    help = {**GoogleWidget.help, "label": "INBOX — усі вкладки, CATEGORY_PERSONAL — лише «Основні»",
-            "forms": "Слово для 1 / 2–4 / 5+ листів"}
+    label, about = "Gmail", "Unread count; shown only when it grows"
+    help = {**GoogleWidget.help, "label": "INBOX = all tabs, CATEGORY_PERSONAL = Primary only",
+            "forms": "Word for 1 / 2–4 / 5+ messages (empty = the language's own)"}
 
     def setup(self):
+        self.forms = self.forms or self.words["unread"]
         if len(self.forms) != 3:
             raise ConfigError("gmail: forms needs 3 words, for 1 / 2-4 / 5+ messages")
         self.prev, self.showing = 0, False

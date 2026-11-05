@@ -100,7 +100,7 @@ def serve(cfg, path):
         r.start(cfg)
         threading.Thread(target=server.serve_forever, name="web", daemon=True).start()
         logging.info("settings: %s", url)
-        icon = tray.start(url, r, lambda: load(path))
+        icon = tray.start(url, r, lambda: load(path), cfg.ui["language"])
     else:
         r.start(cfg)
     try:

@@ -11,13 +11,14 @@ import tomli_w
 from PIL import ImageColor, ImageFont
 
 from .device import Device
+from .i18n import LANGUAGES, WORDS
 from .render import Theme
 from .runner import Slot
 from .widgets import REGISTRY, ConfigError, GoogleWidget
 
 # Project root, not the current folder: autostart launches with cwd = System32.
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / "config.toml"
-UI_DEFAULTS = {"enabled": True, "port": 8765}
+UI_DEFAULTS = {"enabled": True, "port": 8765, "language": "en"}  # language: on-screen words + settings page
 
 
 @dataclass
@@ -116,8 +117,10 @@ def build(raw, path):
     ui = {**UI_DEFAULTS, **_section(raw, "ui", list(UI_DEFAULTS))}
     if not isinstance(ui["port"], int) or not 1024 <= ui["port"] <= 65535:
         raise ConfigError("[ui]: port must be 1024-65535")
+    if ui["language"] not in LANGUAGES:
+        raise ConfigError(f"[ui]: language must be one of {', '.join(LANGUAGES)}")
 
-    ctx = SimpleNamespace(theme=theme, root=path.resolve().parent)
+    ctx = SimpleNamespace(theme=theme, root=path.resolve().parent, words=WORDS[ui["language"]])
     slots, seen = [], set()
     screens = raw.get("screen", [])
     if not isinstance(screens, list):

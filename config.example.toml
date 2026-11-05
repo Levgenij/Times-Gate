@@ -1,4 +1,4 @@
-# Copy to config.toml (gitignored) and edit, or use the settings page (tray icon -> Налаштування).
+# Copy to config.toml (gitignored) and edit, or use the settings page (tray icon -> "Налаштування" / Settings).
 # Values below are the defaults unless marked otherwise; any option can be omitted.
 # Saving from the settings page rewrites config.toml without these comments.
 # No secrets here: Google OAuth client and tokens live in secrets/ (gitignored).
@@ -9,7 +9,7 @@ port = 9000
 path = "/divoom_api"
 timeout = 10               # seconds per request
 jpeg_quality = 90
-# Command sent when timesgate stops (Ctrl+C, console window closed, SIGTERM); default: none.
+# Command sent when timesgate stops (tray Exit, Ctrl+C, console window closed, SIGTERM); default: none.
 # Not sent if the PC loses power, sleeps or crashes. Your device's clock ids:
 #   GET https://app.divoom-gz.com/Channel/Get5LcdInfoV2?DeviceType=LCD&DeviceId=<DeviceId>
 # on_exit = { Command = "Channel/Set5LcdWholeClockId", ClockId = 581 }   # one clock across all 5 screens
@@ -31,6 +31,7 @@ level = "INFO"             # DEBUG also logs every send
 [ui]
 enabled = true             # settings page + tray icon
 port = 8765                # http://127.0.0.1:8765, this PC only; change takes effect after a restart
+language = "en"            # "en" or "uk": words on the screens and the settings page (tray: after a restart)
 
 # Each [[screen]] is one of the 5 panels (slot 1 = leftmost).
 # Its [[screen.widgets]] are a priority list: the slot shows the first widget that has something to show.
@@ -69,8 +70,8 @@ type = "gmail"             # shown only when the unread count grows; otherwise t
 every = 60
 label = "INBOX"            # all tabs; "CATEGORY_PERSONAL" = Primary tab only
 client_secret = "secrets/client_secret*.json"  # OAuth client (Desktop app); paths are relative to this file
-token = "secrets/token_gmail.json"   # created by "sign in" (settings -> Система) or python -m timesgate --google-auth
-forms = ["непрочитаний", "непрочитані", "непрочитаних"]  # label for 1 / 2-4 / 5+
+token = "secrets/token_gmail.json"   # created by "sign in" (settings -> "Система" / System) or --google-auth
+# forms = ["unread", "unread", "unread"]  # word for 1 / 2-4 / 5+ messages; default: the [ui] language's
 
 [[screen.widgets]]
 type = "rates"             # PrivatBank buy / sell to UAH
@@ -88,7 +89,7 @@ align = true               # redraw exactly on the minute
 blink = true               # colon blinks (2-frame animation looped by the device)
 date = true
 date_format = "%d.%m"
-weekdays = ["Пон", "Вів", "Сер", "Чет", "П’ят", "Суб", "Нед"]  # Monday first
+# weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]  # Monday first; default: the [ui] language's
 time_size = 42
 date_size = 14
 

@@ -1,7 +1,7 @@
 from datetime import date
 from typing import NamedTuple
 
-from ..render import SIZE, WEEKDAYS, canvas, font
+from ..render import SIZE, canvas, font
 from . import icons
 from .base import Widget
 
@@ -41,10 +41,10 @@ class Weather(Widget):
     # Open-Meteo refreshes "current" every 15 min
     defaults = {"every": 900, "place": "LONDON", "lat": 51.5074, "lon": -0.1278, "timezone": "Europe/London",
                 "icon": True, "forecast": True}
-    label, about = "Погода", "Температура, небо, денні макс./мін. і прогноз на 2 дні з Open-Meteo"
-    help = {"place": "Назва над температурою (латиницею: стандартний шрифт без кирилиці)",
-            "lat": "Широта", "lon": "Довгота", "timezone": "Часовий пояс, напр. Europe/London",
-            "icon": "Іконка неба біля температури", "forecast": "Унизу завтра й післязавтра: іконка, макс./мін."}
+    label, about = "Weather", "Temperature, sky, today's max/min and a 2-day forecast from Open-Meteo"
+    help = {"place": "Name above the temperature (Latin letters: the default font has no Cyrillic)",
+            "lat": "Latitude", "lon": "Longitude", "timezone": "Time zone, e.g. Europe/London",
+            "icon": "Sky icon next to the temperature", "forecast": "Tomorrow and the day after at the bottom: icon, max/min"}
 
     def fetch(self):
         data = self.get_json(URL, latitude=self.lat, longitude=self.lon, timezone=self.timezone,
@@ -80,7 +80,7 @@ class Weather(Widget):
         if days:
             d.line([(10, 91), (SIZE - 10, 91)], fill=t.dim)
             for (weekday, fcode, fhi, flo), cx in zip(days, (SIZE // 4, SIZE * 3 // 4)):
-                d.text((cx, 100), WEEKDAYS[weekday], fill=t.muted, font=font(11, t.cyrillic_font), anchor="mm")
+                d.text((cx, 100), self.words["weekdays"][weekday], fill=t.muted, font=font(11, t.cyrillic_font), anchor="mm")
                 text = f"{round(fhi)}/{round(flo)}°"
                 f = font(11) if font(11).getlength(text) <= 32 else font(9)  # "-12/-15°" must stay in its half
                 x = round(cx - (20 + 3 + f.getlength(text)) / 2)  # icon + gap + text, centred in the half

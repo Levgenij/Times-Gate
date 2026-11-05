@@ -2,7 +2,7 @@ from datetime import date, datetime, time, timedelta
 from typing import NamedTuple
 from urllib.parse import quote
 
-from ..render import SIZE, WEEKDAYS, canvas, fit, font
+from ..render import SIZE, canvas, fit, font
 from .base import ConfigError
 from .google import GoogleWidget
 
@@ -23,7 +23,7 @@ class Item(NamedTuple):
     task: bool = False
 
 
-def parse(items):
+def parse(items, untitled="(untitled)"):
     """Calendar API items -> [Item]; times in the PC's local zone, declined events skipped."""
     events = []
     for it in items:
@@ -35,11 +35,11 @@ def parse(items):
                                    datetime.fromisoformat(e["dateTime"]).astimezone(), False)
         else:  # all-day: dates, end exclusive
             start, end, all_day = date.fromisoformat(s["date"]), date.fromisoformat(e["date"]), True
-        events.append(Item(start, end, it.get("summary") or "(без назви)", all_day))
+        events.append(Item(start, end, it.get("summary") or untitled, all_day))
     return events
 
 
-def parse_tasks(items):
+def parse_tasks(items, untitled="(untitled)"):
     """Tasks API items -> [Item] of open tasks; a task without a due date gets start None."""
     tasks = []
     for t in items:
@@ -47,7 +47,7 @@ def parse_tasks(items):
             continue
         # the API keeps only the date: "2026-11-06T00:00:00.000Z"
         due = date.fromisoformat(t["due"][:10]) if "due" in t else None
-        tasks.append(Item(due, due and due + timedelta(days=1), t.get("title") or "(без назви)", True, True))
+        tasks.append(Item(due, due and due + timedelta(days=1), t.get("title") or untitled, True, True))
     return tasks
 
 
@@ -66,30 +66,33 @@ def order(item):
     return 0, at if isinstance(at, datetime) else datetime.combine(at, time.min).astimezone()
 
 
-def day_name(day, today):
+def day_name(day, today, words):
     if day == today:
-        return "Сьогодні"
+        return words["today"]
     if day == today + timedelta(days=1):
-        return "Завтра"
-    return f"{WEEKDAYS[day.weekday()]} {day:%d.%m}"
+        return words["tomorrow"]
+    return f"{words['weekdays'][day.weekday()]} {day:%d.%m}"
 
 
-def when(item, now):
-    """Short time line for a row, relative to `now` (aware local datetime)."""
+def when(item, now, words):
+    """Short time line for a row, relative to `now` (aware local datetime), in the language of `words`."""
     start, end, _, all_day, task = item
     today = now.date()
     if task:
         if start is None:
-            return "Завдання"
-        return f"Прострочено · {start:%d.%m}" if start < today else f"{day_name(start, today)} · завдання"
+            return words["undated_task"]
+        if start < today:
+            return f"{words['overdue']} · {start:%d.%m}"
+        return f"{day_name(start, today, words)} · {words['task']}"
     if all_day:
         if start <= today < end:
-            return "Сьогодні · весь день"
-        name = day_name(start, today)
-        return f"{name} · весь день" if name == "Завтра" else name  # other days: a date without a time = all day
+            return f"{words['today']} · {words['all_day']}"
+        name = day_name(start, today, words)
+        # other days: a date without a time = all day
+        return f"{name} · {words['all_day']}" if name == words["tomorrow"] else name
     if start <= now < end:
-        return f"Зараз · до {end:%H:%M}"
-    return f"{day_name(start.date(), today)} {start:%H:%M}"
+        return words["now_until"].format(f"{end:%H:%M}")
+    return f"{day_name(start.date(), today, words)} {start:%H:%M}"
 
 
 def pick(items, now, count, past):
@@ -115,13 +118,13 @@ class Calendar(GoogleWidget):
         "client_secret": "secrets/client_secret*.json",
         "token": "secrets/token_calendar.json",  # its own token: Gmail keeps working, access revocable separately
     }
-    label, about = "Календар", "Події й завдання Google: сьогоднішні минулі події сірим, далі найближчі"
-    help = {**GoogleWidget.help, "calendar": "Id календаря: primary — основний, інші в налаштуваннях Google Calendar",
-            "tasks": "Показувати й невиконані завдання Google Tasks; без дати — в кінці (потрібен вхід із дозволом "
-                     "на завдання)",
-            "tasklist": "Список завдань: @default — «Мої завдання»",
-            "days": "На скільки днів уперед шукати", "count": "Скільки рядків показати, 1–4",
-            "past": "Скільки сьогоднішніх минулих подій лишати зверху сірим (менше за count)"}
+    label, about = "Calendar", "Google events and tasks: today's past events in grey, then the next ones"
+    help = {**GoogleWidget.help,
+            "calendar": "Calendar id: primary = your main one, others are in Google Calendar settings",
+            "tasks": "Also open Google Tasks; undated ones last (needs a sign-in with the tasks permission)",
+            "tasklist": "Task list: @default = My Tasks",
+            "days": "How many days ahead to look", "count": "How many rows to show, 1–4",
+            "past": "How many of today's past events to keep on top in grey (less than count)"}
 
     def setup(self):
         if not 1 <= self.count <= 4:
@@ -139,7 +142,7 @@ class Calendar(GoogleWidget):
                              singleEvents="true", orderBy="startTime",
                              maxResults=50,  # today's finished events come first; room for those and declined ones
                              fields="items(summary,start,end,attendees(self,responseStatus))")
-        return parse(data.get("items", []))
+        return parse(data.get("items", []), self.words["untitled"])
 
     def fetch_tasks(self, until):
         """Open tasks due by `until` or without a due date; completed ones are not shown."""
@@ -151,7 +154,7 @@ class Calendar(GoogleWidget):
             items += data.get("items", [])
             page = data.get("nextPageToken")
             if not page:
-                return [t for t in parse_tasks(items) if t.start is None or t.start <= until.date()]
+                return [t for t in parse_tasks(items, self.words["untitled"]) if t.start is None or t.start <= until.date()]
 
     def render(self, done, ahead, now):
         t = self.theme
@@ -162,7 +165,7 @@ class Calendar(GoogleWidget):
             y = i * ROW
             live = not finished and not item.all_day and item.start <= now < item.end
             overdue = item.task and item.start is not None and item.start < now.date()
-            d.text((6, y + 7), when(item, now), font=small, anchor="lm",
+            d.text((6, y + 7), when(item, now, self.words), font=small, anchor="lm",
                    fill=t.dim if finished else t.up if live else t.down if overdue else t.muted)
             x = 6
             if item.task:  # checkbox before the title

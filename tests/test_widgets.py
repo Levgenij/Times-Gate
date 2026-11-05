@@ -10,6 +10,7 @@ from google.auth.exceptions import RefreshError
 from PIL import ImageChops, ImageColor
 
 from helpers import ctx
+from timesgate.i18n import WORDS
 from timesgate.render import fit, fmt, font
 from timesgate.widgets import ConfigError
 from timesgate.widgets import gcalendar
@@ -152,6 +153,9 @@ class GmailTest(unittest.TestCase):
             self.assertIsNotNone(Gmail(ctx(d)).session)
 
 
+UK = WORDS["uk"]
+
+
 class CalendarTest(unittest.TestCase):
     NOW = datetime(2026, 11, 5, 12, 0).astimezone()  # Thursday noon, local time
 
@@ -168,7 +172,7 @@ class CalendarTest(unittest.TestCase):
         self.assertEqual(start, datetime(2026, 11, 5, 10, 0, tzinfo=timezone.utc))
         self.assertEqual(start.utcoffset(), self.NOW.utcoffset())  # shown in the PC's zone
         self.assertEqual((title, all_day, task), ("Дзвінок", False, False))
-        self.assertEqual(events[1], Item(date(2026, 11, 6), date(2026, 11, 7), "(без назви)", True))
+        self.assertEqual(events[1], Item(date(2026, 11, 6), date(2026, 11, 7), "(untitled)", True))
 
     def test_parse_tasks(self):
         tasks = gcalendar.parse_tasks([
@@ -182,7 +186,7 @@ class CalendarTest(unittest.TestCase):
 
     def test_when(self):
         now, h, today, day = self.NOW, timedelta(hours=1), self.NOW.date(), timedelta(days=1)
-        ev = lambda s, e, all_day=False: when(Item(s, e, "x", all_day), now)  # noqa: E731
+        ev = lambda s, e, all_day=False: when(Item(s, e, "x", all_day), now, UK)  # noqa: E731
         self.assertEqual(ev(now - h, now + h), f"Зараз · до {now + h:%H:%M}")
         self.assertEqual(ev(now + 2 * h, now + 3 * h), f"Сьогодні {now + 2 * h:%H:%M}")
         self.assertEqual(ev(now + day, now + day + h), "Завтра 12:00")
@@ -190,11 +194,13 @@ class CalendarTest(unittest.TestCase):
         self.assertEqual(ev(today, today + day, True), "Сьогодні · весь день")
         self.assertEqual(ev(today + day, today + 2 * day, True), "Завтра · весь день")
         self.assertEqual(ev(today + 2 * day, today + 3 * day, True), "Суб 07.11")
-        task = lambda due: when(Item(due, due and due + day, "x", True, True), now)  # noqa: E731
+        task = lambda due: when(Item(due, due and due + day, "x", True, True), now, UK)  # noqa: E731
         self.assertEqual(task(today), "Сьогодні · завдання")
         self.assertEqual(task(today + day), "Завтра · завдання")
         self.assertEqual(task(today - 2 * day), "Прострочено · 03.11")
         self.assertEqual(task(None), "Завдання")
+        self.assertEqual(when(Item(now - h, now + h, "x", False), now, WORDS["en"]), f"Now · until {now + h:%H:%M}")
+        self.assertEqual(when(Item(today - 2 * day, today - day, "x", True, True), now, WORDS["en"]), "Overdue · 03.11")
 
     def test_pick_finished_above_coming(self):
         now, h = self.NOW, timedelta(hours=1)
