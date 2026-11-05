@@ -32,7 +32,7 @@ class ConfigTest(unittest.TestCase):
 
     def test_example_config_loads(self):
         example = (Path(__file__).parents[1] / "config.example.toml").read_text(encoding="utf-8")
-        with self.assertLogs("timesgate.gmail", "WARNING"):  # temp dir: no token.json, independent of the repo
+        with self.assertLogs("timesgate.gmail", "WARNING"):  # temp dir: no tokens, independent of the repo
             cfg = self.load(example)
         self.assertEqual([s.number for s in cfg.slots], [1, 2, 3, 4, 5])
         self.assertEqual([w.type for w in cfg.slots[1].widgets], ["gmail", "rates"])
@@ -41,8 +41,7 @@ class ConfigTest(unittest.TestCase):
         with self.assertLogs("timesgate.gmail", "WARNING"):
             cfg = self.load(MINIMAL.replace('"text"', '"gmail"'))
         g = cfg.slots[0].widgets[0]
-        self.assertEqual(g.token_path.name, "token.json")
-        self.assertEqual(g.token_path.parent, g.root)
+        self.assertEqual(g.token_path, g.root / "secrets" / "token_gmail.json")  # relative to the config
 
     def test_errors(self):
         cases = {

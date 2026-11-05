@@ -207,7 +207,7 @@ def make_server(runner, path, port):
         def get_log(self, url):
             self.reply(200, {"lines": list(LOG.lines)})
 
-        def post_google_auth(self, url):  # body {"token": "token_calendar.json"}
+        def post_google_auth(self, url):  # body {"token": "secrets/token_calendar.json"}
             token = (self.body() or {}).get("token")
             widget = next((w for w in config.google_widgets(runner.cfg) if w.token == token), None)
             if widget is None:

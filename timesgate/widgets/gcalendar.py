@@ -112,8 +112,8 @@ class Calendar(GoogleWidget):
         "days": 7,       # look this far ahead
         "count": 4,
         "past": 1,       # today's finished events kept on top, greyed out
-        "client_secret": "client_secret*.json",
-        "token": "token_calendar.json",  # its own token: Gmail keeps working, access revocable separately
+        "client_secret": "secrets/client_secret*.json",
+        "token": "secrets/token_calendar.json",  # its own token: Gmail keeps working, access revocable separately
     }
     label, about = "Календар", "Події й завдання Google: сьогоднішні минулі події сірим, далі найближчі"
     help = {**GoogleWidget.help, "calendar": "Id календаря: primary — основний, інші в налаштуваннях Google Calendar",

@@ -32,8 +32,8 @@ class Gmail(GoogleWidget):
     defaults = {
         "every": 60,
         "label": "INBOX",                        # CATEGORY_PERSONAL = the "Primary" tab only
-        "client_secret": "client_secret*.json",  # glob, next to config.toml
-        "token": "token.json",                   # written by "sign in", next to config.toml
+        "client_secret": "secrets/client_secret*.json",  # glob, relative to config.toml
+        "token": "secrets/token_gmail.json",             # written by "sign in"
         "forms": ["непрочитаний", "непрочитані", "непрочитаних"],  # for 1 / 2-4 / 5+
     }
     label, about = "Gmail", "Кількість непрочитаних; показується, лише коли їх стало більше"

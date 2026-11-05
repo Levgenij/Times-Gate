@@ -128,8 +128,8 @@ currencies = ["USD", "EUR"]
 | `clock` | `blink`, `date`, `date_format` (`%d.%m`), `weekdays` (7 назв), `time_size`, `date_size` | годинник комп'ютера |
 | `chart` | `market`, `symbol` (`BTCUSDT`), `interval` (`15m`), `candles` (96), `title` | Binance `klines` |
 | `weather` | `place`, `lat`, `lon`, `timezone`, `icon` (`true`), `forecast` (`true`) | [Open-Meteo](https://open-meteo.com), без ключа |
-| `gmail` | `label` (`INBOX`), `client_secret` (`client_secret*.json`), `token` (`token.json`), `forms` (підпис для 1 / 2–4 / 5+) | Gmail API |
-| `calendar` | `calendar` (`primary`), `tasks` (`true`), `tasklist` (`@default`), `days` (7), `count` (4), `past` (1), `client_secret`, `token` (`token_calendar.json`) | Google Calendar API, Google Tasks API |
+| `gmail` | `label` (`INBOX`), `client_secret` (`secrets/client_secret*.json`), `token` (`secrets/token_gmail.json`), `forms` (підпис для 1 / 2–4 / 5+) | Gmail API |
+| `calendar` | `calendar` (`primary`), `tasks` (`true`), `tasklist` (`@default`), `days` (7), `count` (4), `past` (1), `client_secret`, `token` (`secrets/token_calendar.json`) | Google Calendar API, Google Tasks API |
 | `text` | `text`, `size`, `cyrillic` | — |
 
 Деталі роботи віджетів:
@@ -145,12 +145,12 @@ currencies = ["USD", "EUR"]
 
 ### Google: Gmail і Календар
 
-Обидва віджети використовують один OAuth-клієнт (`client_secret*.json`), але кожен має **свій токен лише зі своїм дозволом**, тож доступ можна відкликати окремо:
+Обидва віджети використовують один OAuth-клієнт (`secrets/client_secret*.json`), але кожен має **свій токен лише зі своїм дозволом**, тож доступ можна відкликати окремо:
 
 | Віджет | Дозвіл | Токен | Що може |
 |--------|--------|-------|---------|
-| `gmail` | `gmail.labels` | `token.json` | бачити мітки й кількість листів; **читати, надсилати чи видаляти листи не може** |
-| `calendar` | `calendar.events.readonly`, `tasks.readonly` (якщо `tasks = true`) | `token_calendar.json` | читати події й завдання; **змінювати, створювати чи видаляти не може** |
+| `gmail` | `gmail.labels` | `secrets/token_gmail.json` | бачити мітки й кількість листів; **читати, надсилати чи видаляти листи не може** |
+| `calendar` | `calendar.events.readonly`, `tasks.readonly` (якщо `tasks = true`) | `secrets/token_calendar.json` | читати події й завдання; **змінювати, створювати чи видаляти не може** |
 
 **Gmail:** кількість непрочитаних — це `messagesUnread` мітки `label`.
 - `INBOX` рахує всі вкладки, тож число може бути більшим за лічильник «Основні» у вебверсії.
@@ -169,7 +169,7 @@ currencies = ["USD", "EUR"]
 **Одноразове налаштування:**
 1. У [Google Cloud Console](https://console.cloud.google.com/), в одному проєкті:
    - увімкни **Gmail API** і/або **Google Calendar API** (для завдань ще **Google Tasks API**);
-   - створи OAuth client типу **Desktop app** і поклади завантажений `client_secret_….json` поруч із `config.toml`.
+   - створи OAuth client типу **Desktop app** і поклади завантажений `client_secret_….json` у папку `secrets/` поруч із `config.toml`.
 2. На екрані згоди OAuth (OAuth consent screen) переведи застосунок у статус **In production**. Поки він у статусі *Testing*, Google анулює токен через 7 днів, і авторизацію доведеться повторювати. Для особистого використання підтверджувати застосунок у Google не обов'язково: при вході буде попередження «неперевірений застосунок», його можна пропустити.
 3. На сторінці налаштувань **Система → Google: … → Увійти** для кожного віджета (або `python -m timesgate --google-auth`, по черзі для всіх). Відкриється браузер: увійди і дозволь доступ. Токен збережеться, і екрани перезапустяться самі.
 
@@ -178,7 +178,9 @@ currencies = ["USD", "EUR"]
 - токен відкликано або він застарів: віджет вимикається до перезапуску з підказкою увійти знову;
 - відкликати доступ можна будь-коли на <https://myaccount.google.com/permissions>.
 
-`token*.json` і `client_secret*.json` є в `.gitignore`, тож у git не потраплять. Не відкривай їх у редакторі, поки працює AI-асистент: розширення передає відкриті файли в розмову.
+Усі секрети Google лежать у `secrets/`: OAuth-клієнт і токени `token_gmail.json`, `token_calendar.json`. Папка є в `.gitignore`, тож у git не потрапить, а в `.claude/settings.json` проєкту AI-агентам заборонено її читати. Шляхи рахуються від `config.toml` і змінюються параметрами `client_secret` / `token`.
+
+Справді чутливі тут токени: у них refresh token. `client_secret` потрібен лише для нового входу (новий віджет чи дозвіл, відкликаний токен, інший ПК); не видаляй його: Google часто дає завантажити його лише при створенні клієнта. Не відкривай файли з `secrets/` у редакторі, поки працює AI-асистент: розширення передає відкриті файли в розмову.
 
 ## Як це влаштовано
 

@@ -122,7 +122,7 @@ class GmailTest(unittest.TestCase):
 
     def gmail(self, **opts):
         with tempfile.TemporaryDirectory() as d, self.assertLogs("timesgate.gmail", "WARNING"):
-            return Gmail(ctx(d), **opts)  # no token.json there: disabled
+            return Gmail(ctx(d), **opts)  # no token there: disabled
 
     def test_without_token_yields(self):
         self.assertIsNone(self.gmail().frames())
@@ -145,7 +145,8 @@ class GmailTest(unittest.TestCase):
 
     def test_token_file_is_loaded(self):
         with tempfile.TemporaryDirectory() as d:
-            Path(d, "token.json").write_text(json.dumps({
+            Path(d, "secrets").mkdir()
+            Path(d, "secrets", "token_gmail.json").write_text(json.dumps({
                 "token": "a", "refresh_token": "r", "client_id": "c", "client_secret": "s",
                 "token_uri": "https://oauth2.googleapis.com/token", "scopes": SCOPES}), encoding="utf-8")
             self.assertIsNotNone(Gmail(ctx(d)).session)

@@ -388,7 +388,7 @@ textarea { resize: vertical; }
       <div v-for="(g, token) in status?.google" :key="token" class="row">
         <div class="grow"><b>Google: {{ g.label }}</b> <span class="mono hint">{{ token }}</span>
           <span class="hint">{{ g.active ? 'Підключено.' : g.authorized ? 'Токен є, але не працює — увійдіть ще раз.'
-            : 'Не підключено. Потрібен client_secret*.json поруч із config.toml і увімкнений API в Google Cloud.' }}</span></div>
+            : 'Не підключено. Потрібен secrets/client_secret*.json і увімкнений API в Google Cloud.' }}</span></div>
         <button class="btn" @click="googleAuth(token)">{{ g.authorized ? 'Увійти знову' : 'Увійти' }}</button>
       </div>
       <div v-if="status && !Object.keys(status.google).length" class="row">

@@ -1,4 +1,4 @@
-"""config.toml -> Device + Slots. Widget files (e.g. the Gmail token) live next to the config."""
+"""config.toml -> Device + Slots. Widget file paths (e.g. secrets/token_gmail.json) are relative to the config."""
 import logging
 import os
 import shutil

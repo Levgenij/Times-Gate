@@ -1,7 +1,7 @@
 # Copy to config.toml (gitignored) and edit, or use the settings page (tray icon -> Налаштування).
 # Values below are the defaults unless marked otherwise; any option can be omitted.
 # Saving from the settings page rewrites config.toml without these comments.
-# No secrets here: the Gmail token lives in token.json (gitignored).
+# No secrets here: Google OAuth client and tokens live in secrets/ (gitignored).
 
 [device]
 ip = "192.168.1.60"        # required; find it: POST https://app.divoom-gz.com/Device/ReturnSameLANDevice
@@ -51,8 +51,8 @@ tasklist = "@default"      # "My Tasks"
 days = 7
 count = 4                  # 1-4 rows
 past = 1                   # today's finished events kept on top in grey, above a red "now" line (0 to count-1)
-client_secret = "client_secret*.json"  # the same OAuth client as gmail
-token = "token_calendar.json"          # its own token, read-only events (+ tasks); created by "sign in"
+client_secret = "secrets/client_secret*.json"  # the same OAuth client as gmail
+token = "secrets/token_calendar.json"          # its own token, read-only events (+ tasks); created by "sign in"
 
 [[screen.widgets]]
 type = "prices"            # Binance last prices, up to 4 rows
@@ -68,8 +68,8 @@ slot = 2
 type = "gmail"             # shown only when the unread count grows; otherwise the slot falls through
 every = 60
 label = "INBOX"            # all tabs; "CATEGORY_PERSONAL" = Primary tab only
-client_secret = "client_secret*.json"  # OAuth client (Desktop app), next to this file
-token = "token.json"       # created by "sign in" (settings -> Система) or python -m timesgate --google-auth
+client_secret = "secrets/client_secret*.json"  # OAuth client (Desktop app); paths are relative to this file
+token = "secrets/token_gmail.json"   # created by "sign in" (settings -> Система) or python -m timesgate --google-auth
 forms = ["непрочитаний", "непрочитані", "непрочитаних"]  # label for 1 / 2-4 / 5+
 
 [[screen.widgets]]

@@ -1,7 +1,8 @@
 """Base for widgets that read a Google API with the user's own OAuth token.
 
-One OAuth client (client_secret*.json, type Desktop app) next to config.toml serves every Google widget; each widget
-keeps its own token file with only the scope it needs, so access can be revoked per widget.
+One OAuth client (secrets/client_secret*.json, type Desktop app) serves every Google widget; each widget keeps its own
+token file in secrets/ with only the scope it needs, so access can be revoked per widget. Paths are relative to
+config.toml; secrets/ is gitignored and can be closed to AI tools with one rule.
 """
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import AuthorizedSession
@@ -31,7 +32,7 @@ def google_error(r):
 class GoogleWidget(Widget):
     """Subclasses set `scopes` and put `client_secret` and `token` into their `defaults`."""
     scopes = []
-    help = {"client_secret": "OAuth-клієнт (Desktop app) поруч із config.toml, можна маску",
+    help = {"client_secret": "OAuth-клієнт (Desktop app), шлях від config.toml, можна маску",
             "token": "Створюється кнопкою «Увійти» на вкладці «Система»"}
 
     def setup(self):
@@ -49,9 +50,10 @@ class GoogleWidget(Widget):
         from google_auth_oauthlib.flow import InstalledAppFlow  # only needed here
         found = sorted(self.root.glob(self.client_secret))
         if not found:
-            raise ConfigError(f"{self.type}: no {self.client_secret} next to the config; download the OAuth "
+            raise ConfigError(f"{self.type}: no {self.client_secret} (relative to the config); download the OAuth "
                               "client (type Desktop app) from Google Cloud Console")
         creds = InstalledAppFlow.from_client_secrets_file(found[0], self.scopes).run_local_server(port=0)
+        self.token_path.parent.mkdir(parents=True, exist_ok=True)
         self.token_path.write_text(creds.to_json(), encoding="utf-8")
         return self.token_path
 
