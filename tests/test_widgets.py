@@ -16,7 +16,8 @@ from timesgate.widgets.clock import Clock
 from timesgate.widgets.gmail import SCOPES, Gmail, decide, plural
 from timesgate.widgets.prices import Prices
 from timesgate.widgets.rates import parse
-from timesgate.widgets.weather import describe
+from timesgate.widgets import icons
+from timesgate.widgets.weather import Weather, deg, describe, lookup
 
 
 class RatesTest(unittest.TestCase):
@@ -63,6 +64,22 @@ class WeatherTest(unittest.TestCase):
         self.assertEqual(describe(63), "Rain")
         self.assertEqual(describe(99), "Thunderstorm")
         self.assertEqual(describe(42), "")  # unknown code: no label rather than a crash
+
+    def test_every_code_has_a_drawable_icon(self):
+        for code in [0, 1, 2, 3, 45, 48, *range(51, 58), *range(61, 68), *range(71, 78), 80, 81, 82, 85, 86,
+                     95, 96, 99, 42]:
+            kind = lookup(code)[1]
+            self.assertIn(kind, icons.KINDS, f"code={code}")
+            for day in (True, False):
+                self.assertIsNotNone(icons.draw(kind, day).getbbox(), f"{kind} day={day} is empty")
+
+    def test_no_negative_zero(self):
+        self.assertEqual(deg(-0.3), "0°")
+        self.assertEqual(deg(-0.6), "-1°")
+
+    def test_render_fits_long_temperature(self):
+        img = Weather(ctx()).render(-12.4, 73, True, -3, -15)
+        self.assertEqual(img.size, (128, 128))
 
 
 class GmailTest(unittest.TestCase):

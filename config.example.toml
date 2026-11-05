@@ -96,6 +96,7 @@ place = "LONDON"
 lat = 51.5074
 lon = -0.1278
 timezone = "Europe/London"
+icon = true                # sun / moon / clouds / rain / snow / storm / fog icon next to the temperature
 
 # Also available:
 # [[screen.widgets]]
