@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from PIL import Image, ImageDraw, ImageFont
 
 SIZE = 128  # each of the 5 Times Gate panels is 128x128
+WEEKDAYS = ["Пон", "Вів", "Сер", "Чет", "П’ят", "Суб", "Нед"]  # Monday first; needs theme.cyrillic_font
 
 
 @dataclass(frozen=True)

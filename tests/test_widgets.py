@@ -78,8 +78,28 @@ class WeatherTest(unittest.TestCase):
         self.assertEqual(deg(-0.6), "-1°")
 
     def test_render_fits_long_temperature(self):
-        img = Weather(ctx()).render(-12.4, 73, True, -3, -15)
+        img = Weather(ctx()).render(-12.4, 73, True, -3, -15, [(6, 95, -12, -15), (0, 3, 2, -8)])
         self.assertEqual(img.size, (128, 128))
+
+    def test_forecast_parses_next_two_days(self):
+        w = Weather(ctx())
+        w.get_json = MagicMock(return_value={
+            "current": {"temperature_2m": 18.4, "weather_code": 2, "is_day": 0},
+            "daily": {"time": ["2026-11-05", "2026-11-06", "2026-11-07"], "weather_code": [2, 61, 0],
+                      "temperature_2m_max": [21, 19, 23], "temperature_2m_min": [12, 11, 13]}})
+        temp, code, is_day, hi, lo, days = w.fetch()
+        self.assertEqual((temp, code, is_day, hi, lo), (18.4, 2, False, 21, 12))
+        self.assertEqual(days, [(4, 61, 19, 11), (5, 0, 23, 13)])  # Fri, Sat
+        self.assertEqual(w.get_json.call_args.kwargs["forecast_days"], 3)
+
+    def test_forecast_off_keeps_today_only(self):
+        w = Weather(ctx(), forecast=False)
+        w.get_json = MagicMock(return_value={
+            "current": {"temperature_2m": 5, "weather_code": 3},
+            "daily": {"time": ["2026-11-05"], "weather_code": [3], "temperature_2m_max": [7],
+                      "temperature_2m_min": [1]}})
+        self.assertEqual(w.fetch()[-1], [])
+        self.assertEqual(w.get_json.call_args.kwargs["forecast_days"], 1)
 
 
 class GmailTest(unittest.TestCase):

@@ -103,6 +103,7 @@ lat = 51.5074
 lon = -0.1278
 timezone = "Europe/London"
 icon = true                # sun / moon / clouds / rain / snow / storm / fog icon next to the temperature
+forecast = true            # tomorrow and the day after at the bottom: weekday, small icon, max/min
 
 # Also available:
 # [[screen.widgets]]

@@ -1,6 +1,6 @@
 import time
 
-from ..render import SIZE, canvas, font
+from ..render import SIZE, WEEKDAYS, canvas, font
 from .base import ConfigError, Widget
 
 
@@ -10,7 +10,7 @@ class Clock(Widget):
     defaults = {
         "every": 60, "align": True,  # redraw on each minute boundary
         "blink": True, "date": True, "date_format": "%d.%m",
-        "weekdays": ["Пон", "Вів", "Сер", "Чет", "П’ят", "Суб", "Нед"],  # Monday first
+        "weekdays": WEEKDAYS,
         "time_size": 42, "date_size": 14,
     }
     label, about = "Годинник", "24-годинний час і дата з днем тижня"

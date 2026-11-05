@@ -127,7 +127,7 @@ currencies = ["USD", "EUR"]
 | `rates` | `currencies` (1–2, `USD`, `EUR`) | ПриватБанк `p24api/exchange_rates` |
 | `clock` | `blink`, `date`, `date_format` (`%d.%m`), `weekdays` (7 назв), `time_size`, `date_size` | годинник комп'ютера |
 | `chart` | `market`, `symbol` (`BTCUSDT`), `interval` (`15m`), `candles` (96), `title` | Binance `klines` |
-| `weather` | `place`, `lat`, `lon`, `timezone`, `icon` (`true`) | [Open-Meteo](https://open-meteo.com), без ключа |
+| `weather` | `place`, `lat`, `lon`, `timezone`, `icon` (`true`), `forecast` (`true`) | [Open-Meteo](https://open-meteo.com), без ключа |
 | `gmail` | `label` (`INBOX`), `client_secret` (`client_secret*.json`), `token` (`token.json`), `forms` (підпис для 1 / 2–4 / 5+) | Gmail API |
 | `text` | `text`, `size`, `cyrillic` | — |
 
@@ -140,6 +140,7 @@ currencies = ["USD", "EUR"]
   - Іконки: сонце або місяць (за `is_day` з Open-Meteo), мало хмар, мінлива хмарність, суцільна хмарність, туман, мряка, дощ, злива, сніг, гроза.
   - Іконки малюються кодом у [icons.py](timesgate/widgets/icons.py) без файлів-картинок. Вони рендеряться в 4 рази більшими і зменшуються, тож краї гладкі.
   - `icon = false` показує лише велику температуру, як раніше.
+  - `forecast = true`: унизу, під тонкою лінією, завтра й післязавтра — день тижня українською (як у годиннику), маленька денна іконка й макс./мін. Верхня частина тоді трохи компактніша. `forecast = false` повертає попередній вигляд.
 
 ### Gmail
 
