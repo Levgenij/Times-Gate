@@ -15,10 +15,6 @@ def lookup(code):
     return next(((label, kind) for codes, label, kind in WMO if code in codes), ("", "overcast"))
 
 
-def describe(code):
-    return lookup(code)[0]
-
-
 def deg(t):
     return f"{round(t)}°"  # round() gives 0, not "-0", for -0.3
 

@@ -17,7 +17,7 @@ from timesgate.widgets.gmail import SCOPES, Gmail, decide, plural
 from timesgate.widgets.prices import Prices
 from timesgate.widgets.rates import parse
 from timesgate.widgets import icons
-from timesgate.widgets.weather import Weather, deg, describe, lookup
+from timesgate.widgets.weather import Weather, deg, lookup
 
 
 class RatesTest(unittest.TestCase):
@@ -59,11 +59,11 @@ class ChartTest(unittest.TestCase):
 
 class WeatherTest(unittest.TestCase):
     def test_codes(self):
-        self.assertEqual(describe(0), "Clear")
-        self.assertEqual(describe(3), "Overcast")
-        self.assertEqual(describe(63), "Rain")
-        self.assertEqual(describe(99), "Thunderstorm")
-        self.assertEqual(describe(42), "")  # unknown code: no label rather than a crash
+        self.assertEqual(lookup(0), ("Clear", "clear"))
+        self.assertEqual(lookup(3), ("Overcast", "overcast"))
+        self.assertEqual(lookup(63), ("Rain", "rain"))
+        self.assertEqual(lookup(99), ("Thunderstorm", "thunder"))
+        self.assertEqual(lookup(42), ("", "overcast"))  # unknown code: no label rather than a crash
 
     def test_every_code_has_a_drawable_icon(self):
         for code in [0, 1, 2, 3, 45, 48, *range(51, 58), *range(61, 68), *range(71, 78), 80, 81, 82, 85, 86,

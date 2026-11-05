@@ -51,6 +51,28 @@ on_exit = { Command = "Channel/Set5LcdWholeClockId", ClockId = 581 }   # оди�
 curl "https://app.divoom-gz.com/Channel/Get5LcdInfoV2?DeviceType=LCD&DeviceId=<DeviceId>"
 ```
 
+### Автозапуск у Windows
+
+Завдання в Планувальнику запускає програму при вході в систему, без вікна консолі (`pythonw`). Логи пишуться в `timesgate.log` поруч із `config.toml` (до 1 МБ плюс один старий файл).
+
+Виконати з папки проєкту:
+
+```powershell
+$action = New-ScheduledTaskAction -Execute (Get-Command pythonw).Source -Argument "-m timesgate" -WorkingDirectory (Get-Location)
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
+# без ліміту часу: за замовчуванням Планувальник зупиняє завдання через 72 години
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+Register-ScheduledTask -TaskName timesgate -Action $action -Trigger $trigger -Settings $settings
+```
+
+| Команда | Що робить |
+|---------|-----------|
+| `Start-ScheduledTask timesgate` | запустити зараз |
+| `Stop-ScheduledTask timesgate` | зупинити (процес вбивається, `on_exit` не надсилається) |
+| `Unregister-ScheduledTask timesgate` | прибрати автозапуск |
+
+Не запускай одночасно ще й `python -m timesgate` у консолі: дві копії надсилатимуть кадри на ті самі екрани.
+
 ## Екрани за замовчуванням
 
 | Слот | Віджети | Оновлення |

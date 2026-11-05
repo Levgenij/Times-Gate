@@ -9,3 +9,4 @@ config.toml
 out/
 client_secret*.json
 token*.json
+timesgate.log*

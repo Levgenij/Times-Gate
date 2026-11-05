@@ -3,6 +3,7 @@ import argparse
 import logging
 import sys
 import time
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from . import runner
@@ -19,13 +20,18 @@ def main(argv=None):
     mode.add_argument("--gmail-auth", action="store_true", help="one-time Gmail login in the browser")
     args = p.parse_args(argv)
     # configure before load(): widgets may log while being built; the level comes from the config
+    handlers = None
+    if sys.stderr is None:  # pythonw (autostart) has no console: log next to the config instead
+        handlers = [RotatingFileHandler(Path(args.config).resolve().with_name("timesgate.log"),
+                                        maxBytes=1_000_000, backupCount=1, encoding="utf-8")]
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-                        datefmt="%H:%M:%S")
+                        datefmt="%d.%m %H:%M:%S", handlers=handlers)
     logging.getLogger("urllib3").setLevel(logging.WARNING)  # per-request lines drown DEBUG output
     try:
         cfg = load(args.config)
     except ConfigError as e:
-        sys.exit(f"config error: {e}")
+        logging.critical("config error: %s", e)  # sys.exit(msg) would be lost without a console
+        sys.exit(1)
     logging.getLogger().setLevel(cfg.level)
 
     if args.gmail_auth:
