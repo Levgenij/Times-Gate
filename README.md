@@ -1,4 +1,4 @@
-# Times Gate
+# Divoom Times Gate
 
 One small Python program that drives the five screens of a **Divoom Times Gate** over the device's local HTTP API: Google Calendar events and tasks, crypto/futures prices, exchange rates, a clock, a price chart, the weather and the Gmail unread count. It has a local settings page, a tray icon and Windows autostart.
 
