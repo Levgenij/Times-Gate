@@ -46,5 +46,8 @@ class Chart(Widget):
         d.text((SIZE // 2, 29), fmt(closes[-1]), fill=t.text, font=font(19), anchor="mm")
         pts = points(closes)
         d.polygon(pts + [(RIGHT, BOTTOM), (LEFT, BOTTOM)], fill=fill)
+        y = round(pts[-1][1])
+        for x in range(LEFT, RIGHT, 4):  # dashed line at the last price, under the price line
+            d.line([(x, y), (x + 1, y)], fill=t.muted)
         d.line(pts, fill=line, width=2)
         return [img]

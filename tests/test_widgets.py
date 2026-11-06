@@ -16,7 +16,7 @@ from timesgate.render import fit, fmt, font
 from timesgate.widgets import ConfigError
 from timesgate.widgets import gcalendar
 from timesgate.widgets.gcalendar import ROW, Calendar, Item, when
-from timesgate.widgets.chart import BOTTOM, LEFT, RIGHT, TOP, points
+from timesgate.widgets.chart import BOTTOM, LEFT, RIGHT, TOP, Chart, points
 from timesgate.widgets.clock import Clock
 from timesgate.widgets.gmail import SCOPES, Gmail, decide, top
 from timesgate.widgets.google import google_error
@@ -61,6 +61,14 @@ class ChartTest(unittest.TestCase):
 
     def test_flat_series(self):
         self.assertTrue(all(y == BOTTOM for _, y in points([5, 5, 5])))
+
+    def test_last_price_line(self):
+        c = Chart(ctx())
+        c.get_json = MagicMock(return_value=[[0, "10", 0, 0, close] for close in ("10", "30", "20")])
+        (img,) = c.frames()
+        y = round((TOP + BOTTOM) / 2)  # 20 is halfway between 10 and 30
+        self.assertEqual(img.getpixel((LEFT, y)), ImageColor.getrgb(c.theme.muted))  # left of the chart line
+        self.assertNotEqual(img.getpixel((LEFT, y - 3)), ImageColor.getrgb(c.theme.muted))
 
 
 class WeatherTest(unittest.TestCase):
