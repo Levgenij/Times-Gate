@@ -347,7 +347,22 @@ class CalendarTest(unittest.TestCase):
                     "end": {"dateTime": "2000-01-01T10:00:00Z"}}
         self.assertIsNone(self.calendar([finished]).frames())  # only finished ones: nothing coming -> next widget
 
+    def test_show_if(self):
+        today = self.NOW.date()
+        h = timedelta(hours=1)
+        meeting = Item(self.NOW + 26 * h, self.NOW + 27 * h, "Завтра", False)  # a datetime: compared by its day
+        task = Item(today - timedelta(days=3), today, "Прострочене", True, True)
+        undated = Item(None, None, "Колись", True, True)
+        self.assertFalse(gcalendar.due_by([meeting, undated], today))
+        self.assertTrue(gcalendar.due_by([meeting], today + timedelta(days=1)))
+        self.assertTrue(gcalendar.due_by([task], today))  # overdue counts as today
+        c = self.calendar([], tasks=[{"title": "Колись", "status": "needsAction"}])
+        c.show_if = "today"
+        self.assertIsNone(c.frames())  # only an undated task: next widget
+
     def test_bad_options(self):
+        with self.assertRaises(ConfigError):
+            Calendar(ctx(), show_if="week")
         with self.assertRaises(ConfigError):
             Calendar(ctx(), count=5)
         with self.assertRaises(ConfigError):

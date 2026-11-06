@@ -98,6 +98,10 @@ UK = {
     "How many rows to show, 1–4": "Скільки рядків показати, 1–4",
     "How many of today's past events to keep on top in grey (less than count)":
         "Скільки сьогоднішніх минулих подій лишати зверху сірим (менше за count)",
+    "Show the calendar when anything is coming within days, or only when an event or task is due today / today or "
+    "tomorrow; otherwise the next widget":
+        "Показувати календар, коли щось є в межах days, або лише коли подія чи завдання на сьогодні / сьогодні чи "
+        "завтра; інакше — наступний віджет",
     # settings page (timesgate/ui/index.html)
     'App not responding': 'Програма не відповідає',
     'Device online': 'Пристрій на зв’язку',

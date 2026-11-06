@@ -140,7 +140,7 @@ Config errors (unknown widget or option, duplicate slot, bad IP) are reported at
 | `chart` | `market`, `symbol` (`BTCUSDT`), `interval` (`15m`), `candles` (96), `title` | Binance `klines` |
 | `weather` | `place`, `lat`, `lon`, `timezone`, `icon` (`true`), `forecast` (`true`) | [Open-Meteo](https://open-meteo.com), no API key |
 | `gmail` | `label` (`UNREAD`), `client_secret` (`secrets/client_secret*.json`), `token` (`secrets/token_gmail.json`) | Gmail API |
-| `calendar` | `calendar` (`primary`), `tasks` (`true`), `tasklist` (`@default`), `days` (7), `count` (4), `past` (1), `client_secret`, `token` (`secrets/token_calendar.json`) | Google Calendar API, Google Tasks API |
+| `calendar` | `calendar` (`primary`), `tasks` (`true`), `tasklist` (`@default`), `days` (7), `count` (4), `past` (1), `show_if` (`anything`), `client_secret`, `token` (`secrets/token_calendar.json`) | Google Calendar API, Google Tasks API |
 | `text` | `text`, `size`, `cyrillic` | — |
 
 Details:
@@ -174,6 +174,7 @@ Both widgets use one OAuth client (`secrets/client_secret*.json`), but each keep
 - Tasks without a due date (`Task`) come last, in their Google Tasks order; while there are any, the screen does not fall back to prices.
 - Times are in the PC's time zone, events you declined are skipped, long titles end with "…".
 - If nothing is coming, the slot shows its next widget (prices by default).
+- `show_if = "today"` or `"today+tomorrow"`: the calendar shows only when an event or a dated task falls on today (or today and tomorrow; overdue tasks count as today), otherwise the next widget. Default `"anything"`: anything coming within `days`.
 
 **One-time setup:**
 1. In [Google Cloud Console](https://console.cloud.google.com/), in one project:
@@ -214,6 +215,7 @@ tools/          screenshots.py: renders docs/screens.png from sample data
 - **A slow request doesn't hold up other screens.** Each slot runs in its own thread, so an exchange request (up to 15 s) doesn't delay the clock.
 - **Device unreachable:** one warning in the log, sends pause for 30 s.
 - **Widget failure** (e.g. an API is down): the last frame stays on screen and the widget retries after `retry`.
+- **After the PC sleeps** the screens catch up within ~10 s: slots wait in 10 s steps against the wall clock (Windows timers stop during sleep), and instead of failing, a request on a dead connection is retried once, and up to three times over ~12 s while the network comes back.
 - **The settings page has no schema of its own:** forms are built from each widget's `defaults`, labels come from the class's `label`, `about`, `help` and `choices`. A new widget appears in the UI by itself.
 - **Settings page protection:** the server listens on `127.0.0.1` only, accepts only `Host: 127.0.0.1` / `localhost` (against DNS rebinding) and changes only with `Content-Type: application/json`, so another site open in the same browser cannot change the config. Google tokens are never returned by the API.
 

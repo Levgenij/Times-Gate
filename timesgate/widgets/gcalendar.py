@@ -95,6 +95,13 @@ def when(item, now, words):
     return f"{day_name(start.date(), today, words)} {start:%H:%M}"
 
 
+def due_by(items, last_day):
+    """Is any item on or before `last_day`: an event that starts by then, a task due by then (overdue too)?
+    Undated tasks don't count."""
+    return any(e.start is not None and (e.start.date() if isinstance(e.start, datetime) else e.start) <= last_day
+               for e in items)
+
+
 def pick(items, now, count, past):
     """(finished, coming) rows: up to `past` of today's finished items, more if few are coming; ongoing = coming."""
     done = [e for e in items if ended(e, now)]
@@ -115,6 +122,7 @@ class Calendar(GoogleWidget):
         "days": 7,       # look this far ahead
         "count": 4,
         "past": 1,       # today's finished events kept on top, greyed out
+        "show_if": "anything",  # or only when something is due "today" / "today+tomorrow"
         "client_secret": "secrets/client_secret*.json",
         "token": "secrets/token_calendar.json",  # its own token: Gmail keeps working, access revocable separately
     }
@@ -124,7 +132,11 @@ class Calendar(GoogleWidget):
             "tasks": "Also open Google Tasks; undated ones last (needs a sign-in with the tasks permission)",
             "tasklist": "Task list: @default = My Tasks",
             "days": "How many days ahead to look", "count": "How many rows to show, 1–4",
-            "past": "How many of today's past events to keep on top in grey (less than count)"}
+            "past": "How many of today's past events to keep on top in grey (less than count)",
+            "show_if": "Show the calendar when anything is coming within days, or only when an event or task is "
+                       "due today / today or tomorrow; otherwise the next widget"}
+    EXTRA_DAYS = {"anything": None, "today": 0, "today+tomorrow": 1}  # show_if -> days after today that count
+    choices = {"show_if": list(EXTRA_DAYS)}
 
     def setup(self):
         if not 1 <= self.count <= 4:
@@ -133,6 +145,8 @@ class Calendar(GoogleWidget):
             raise ConfigError("calendar: days must be a positive number")
         if not isinstance(self.past, int) or not 0 <= self.past < self.count:
             raise ConfigError("calendar: past takes 0 to count-1, so at least one row is left for coming events")
+        if self.show_if not in self.EXTRA_DAYS:
+            raise ConfigError(f"calendar: show_if takes {', '.join(self.EXTRA_DAYS)}")
         self.scopes = [EVENTS_SCOPE] + ([TASKS_SCOPE] if self.tasks else [])  # sign-in asks for exactly these
         super().setup()
 
@@ -188,4 +202,7 @@ class Calendar(GoogleWidget):
         midnight, until = now.replace(hour=0, minute=0, second=0, microsecond=0), now + timedelta(days=self.days)
         items = self.fetch_events(midnight, until) + (self.fetch_tasks(until) if self.tasks else [])
         done, ahead = pick(sorted(items, key=order), now, self.count, self.past)
-        return [self.render(done, ahead, now)] if ahead else None  # only finished ones left: show the next widget
+        extra = self.EXTRA_DAYS[self.show_if]
+        if not ahead or extra is not None and not due_by(ahead, now.date() + timedelta(days=extra)):
+            return None  # nothing (due soon enough) is coming: show the next widget
+        return [self.render(done, ahead, now)]

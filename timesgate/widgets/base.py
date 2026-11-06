@@ -1,10 +1,22 @@
 import logging
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 
 class ConfigError(ValueError):
     """Invalid config.toml."""
+
+
+def with_retries(session):
+    """After the PC sleeps, kept-alive connections are dead and the network may need ~10 s to come back.
+    Retries: one on a dropped connection or read timeout (more would block a slot for minutes when an API hangs),
+    up to 3 on "can't connect"; pauses 0, 4, 8 s."""
+    adapter = HTTPAdapter(max_retries=Retry(total=3, read=1, backoff_factor=2))
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
 
 
 class Widget:
@@ -41,7 +53,7 @@ class Widget:
         self.theme, self.root = ctx.theme, ctx.root  # root: folder of config.toml, for widget files
         self.words = ctx.words  # on-screen words of the configured language (i18n.WORDS)
         self.log = logging.getLogger(f"timesgate.{self.type}")
-        self.http = requests.Session()  # per widget: each widget runs only in its own slot thread
+        self.http = with_retries(requests.Session())  # per widget: each widget runs only in its own slot thread
         self.setup()
 
     def setup(self):

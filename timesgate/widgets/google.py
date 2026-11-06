@@ -8,7 +8,7 @@ from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.credentials import Credentials
 
-from .base import ConfigError, Widget
+from .base import ConfigError, Widget, with_retries
 
 AUTH_HINT = "sign in: settings page -> System, or python -m timesgate --google-auth"
 SCOPE_REASONS = {"ACCESS_TOKEN_SCOPE_INSUFFICIENT", "insufficientPermissions"}  # the token lacks a permission
@@ -40,7 +40,7 @@ class GoogleWidget(Widget):
         self.session = None
         if self.token_path.exists():
             creds = Credentials.from_authorized_user_file(self.token_path, self.scopes)
-            self.session = AuthorizedSession(creds)  # refreshes the hourly access token by itself
+            self.session = with_retries(AuthorizedSession(creds))  # refreshes the hourly access token by itself
         elif self.token_path not in _warned:  # once: every preview in the settings UI builds a new widget
             _warned.add(self.token_path)
             self.log.warning("%s not found, %s widget disabled; %s", self.token_path.name, self.type, AUTH_HINT)

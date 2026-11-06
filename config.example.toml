@@ -52,6 +52,7 @@ tasklist = "@default"      # "My Tasks"
 days = 7
 count = 4                  # 1-4 rows
 past = 1                   # today's finished events kept on top in grey, above a red "now" line (0 to count-1)
+show_if = "anything"       # or "today" / "today+tomorrow": only when an event or dated task is due then
 client_secret = "secrets/client_secret*.json"  # the same OAuth client as gmail
 token = "secrets/token_calendar.json"          # its own token, read-only events (+ tasks); created by "sign in"
 

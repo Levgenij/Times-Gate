@@ -1,11 +1,14 @@
+import socket
+import struct
+import threading
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from PIL import Image
 
 from helpers import ctx
 from timesgate.device import DeviceDown
-from timesgate.runner import Slot, next_time
+from timesgate.runner import WAIT_STEP, Slot, next_time
 from timesgate.widgets import Widget
 
 
@@ -66,6 +69,45 @@ class SlotTest(unittest.TestCase):
     def test_align(self):
         self.assertEqual(next_time(125.5, 60, True), 180)
         self.assertEqual(next_time(125.5, 60, False), 185.5)
+
+
+class SleepTest(unittest.TestCase):
+    """After the PC sleeps: screens catch up with the wall clock and dead connections don't cost a refresh."""
+
+    def test_screen_refreshes_soon_after_wake(self):
+        clock = [1000.0]
+        widget = Fake(ctx(), value="red", every=900)
+        widget.frames = MagicMock(wraps=widget.frames)
+        stop = MagicMock()
+        stop.is_set.side_effect = lambda: widget.frames.call_count >= 2
+
+        def wait(seconds):  # the PC sleeps 8 h during the first wait; Windows' timer would not count it
+            self.assertLessEqual(seconds, WAIT_STEP)
+            clock[0] += 8 * 3600 if clock[0] == 1000.0 else seconds
+        stop.wait.side_effect = wait
+        with patch("timesgate.runner.time.time", side_effect=lambda: clock[0]):
+            Slot(1, [widget]).run(device(), stop)
+        self.assertEqual(widget.frames.call_count, 2)
+        self.assertEqual(stop.wait.call_count, 1)  # refreshed right after the first short wait, not 900 s later
+
+    def test_dropped_connection_is_retried(self):
+        server = socket.socket()
+        server.bind(("127.0.0.1", 0))
+        server.listen()
+        self.addCleanup(server.close)
+
+        def serve():
+            conn, _ = server.accept()  # 1st: reset, like a kept-alive connection after the PC slept
+            conn.recv(4096)
+            conn.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+            conn.close()
+            conn, _ = server.accept()  # 2nd: a normal answer
+            conn.recv(4096)
+            conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 12\r\n"
+                         b"Connection: close\r\n\r\n{\"ok\": true}")
+            conn.close()
+        threading.Thread(target=serve, daemon=True).start()
+        self.assertEqual(Fake(ctx()).get_json(f"http://127.0.0.1:{server.getsockname()[1]}/"), {"ok": True})
 
 
 if __name__ == "__main__":

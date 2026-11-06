@@ -9,6 +9,7 @@ import time
 from .device import DeviceDown, DeviceError
 
 log = logging.getLogger("timesgate.runner")
+WAIT_STEP = 10  # seconds: how soon the screens catch up after the PC wakes from sleep
 
 
 def digest(frames, speed):
@@ -73,7 +74,10 @@ class Slot:
             except Exception:  # a bug here must not silently freeze one screen
                 log.exception("slot %d crashed, restarting in 30 s", self.number)
                 wake = time.time() + 30
-            stop.wait(max(0.0, wake - time.time()))
+            # Short waits checked against the wall clock: Windows timers stop while the PC sleeps, so one long
+            # wait would leave the screen stale after wake-up for up to `every` (15 min for the weather).
+            while not stop.is_set() and time.time() < wake:
+                stop.wait(min(wake - time.time(), WAIT_STEP))
 
 
 _console_handler = None  # must stay referenced, or ctypes frees the callback
