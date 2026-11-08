@@ -331,7 +331,7 @@ textarea { resize: vertical; }
     </section>
     <section class="card section">
       <header><h2>{{ t('When the program stops') }}</h2>
-        <p class="sub">{{ t('Command sent on tray Exit, Ctrl+C or closing the console. Not sent if the PC shuts down, sleeps or the process is killed.') }}</p></header>
+        <p class="sub">{{ t('Command sent on tray Exit, Ctrl+C, closing the console and when the PC goes to sleep (the screens come back after wake-up). Not sent if the PC shuts down or the process is killed.') }}</p></header>
       <div class="radios" role="radiogroup">
         <label v-for="m in exitModes" :key="m.id" class="radio" :class="{ on: exitMode === m.id }">
           <input type="radio" name="exit" :checked="exitMode === m.id" @change="setExitMode(m.id)">{{ t(m.label) }}

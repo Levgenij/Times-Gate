@@ -138,7 +138,7 @@ UK = {
     'Connection': 'Підключення',
     'Times Gate local HTTP API.': 'Локальний HTTP API Times Gate.',
     'When the program stops': 'Коли програма зупиняється',
-    'Command sent on tray Exit, Ctrl+C or closing the console. Not sent if the PC shuts down, sleeps or the process is killed.': 'Команда при виході з трею, Ctrl+C чи закритті консолі. Не надсилається, якщо комп’ютер вимкнувся, заснув або процес убито.',
+    'Command sent on tray Exit, Ctrl+C, closing the console and when the PC goes to sleep (the screens come back after wake-up). Not sent if the PC shuts down or the process is killed.': 'Команда при виході з трею, Ctrl+C, закритті консолі та коли комп’ютер засинає (після пробудження екрани повертаються). Не надсилається, якщо комп’ютер вимкнувся або процес убито.',
     'Do nothing': 'Нічого не робити',
     'Switch on the built-in clock': 'Увімкнути вбудований годинник',
     'Custom command': 'Своя команда',

@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 from PIL import Image
 
 from helpers import ctx
-from timesgate.device import DeviceDown
-from timesgate.runner import WAIT_STEP, Slot, next_time
+from timesgate.device import Device, DeviceDown
+from timesgate.runner import WAIT_STEP, Runner, Slot, next_time
 from timesgate.widgets import Widget
 
 
@@ -89,6 +89,32 @@ class SleepTest(unittest.TestCase):
             Slot(1, [widget]).run(device(), stop)
         self.assertEqual(widget.frames.call_count, 2)
         self.assertEqual(stop.wait.call_count, 1)  # refreshed right after the first short wait, not 900 s later
+
+    def test_sleep_hands_back_and_wake_redraws(self):
+        dev = Device("192.168.1.60", on_exit={"Command": "Clock"})
+        dev.command = MagicMock(return_value={"ReturnCode": 0})
+        slot = Slot(1, [Fake(ctx(), value="red", every=900)])  # next refresh in 15 min: the wait must not hide resume
+        runner = Runner()
+        runner.cfg = MagicMock(device=dev, slots=[slot])
+        stop = threading.Event()
+        self.addCleanup(stop.set)
+
+        def calls(n, tries=200):  # wait (at most tries x 0.01 s) until the device got `n` commands
+            for _ in range(tries):
+                if dev.command.call_count >= n:
+                    break
+                stop.wait(0.01)
+            return dev.command.call_count
+        with patch("timesgate.runner.WAIT_STEP", 0.01):
+            threading.Thread(target=slot.run, args=(dev, stop), daemon=True).start()
+            self.assertEqual(calls(1), 1)  # the frame
+            runner.suspend()
+            self.assertEqual(dev.command.call_args.args[0], {"Command": "Clock"})
+            slot.due = [0.0]  # a widget due while asleep must not draw over on_exit
+            self.assertEqual(calls(3, tries=20), 2)  # 0.2 s: the slot checks every 0.01 s
+            runner.resume()  # the same picture as before sleep, but the device shows on_exit: send it again
+            self.assertEqual(calls(3), 3)
+        self.assertEqual(dev.command.call_args.args[0]["Command"], "Draw/SendHttpGif")
 
     def test_dropped_connection_is_retried(self):
         server = socket.socket()

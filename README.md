@@ -74,11 +74,12 @@ It is sent on:
 - ✅ **Exit** in the tray;
 - ✅ `Ctrl+C`;
 - ✅ closing the console window;
-- ✅ `SIGTERM`, e.g. stopping a systemd service.
+- ✅ `SIGTERM`, e.g. stopping a systemd service;
+- ✅ the PC going to sleep (Windows): after it wakes up, all screens are drawn again.
 
 It is **not** sent on:
 - ❌ Windows logoff or shutdown: Windows doesn't pass these events to processes that loaded `user32.dll` / `gdi32.dll`, and Pillow loads them;
-- ❌ power loss, sleep or a crash;
+- ❌ power loss or a crash;
 - ❌ a network outage.
 
 Use **Exit** in the tray before shutting down. The device doesn't notice by itself that the sender is gone.

@@ -44,12 +44,21 @@ class Device:
             if self._exit_sent:
                 return
             self._exit_sent = True
-            if self.on_exit:
-                try:
-                    self.command(self.on_exit)
-                    log.info("sent on_exit %s", self.on_exit["Command"])
-                except (requests.RequestException, DeviceError) as e:
-                    log.warning("on_exit failed: %s", e)
+            self._send_exit()
+
+    def pause(self):
+        """The PC goes to sleep: send on_exit, then no frames until `down_until` is reset to 0 (Runner.resume)."""
+        with self._lock:  # after the frame in flight, so it cannot land after on_exit
+            self.down_until = float("inf")  # send() raises DeviceDown: the slots keep their pictures unsent
+            self._send_exit()
+
+    def _send_exit(self):
+        if self.on_exit:
+            try:
+                self.command(self.on_exit)
+                log.info("sent on_exit %s", self.on_exit["Command"])
+            except (requests.RequestException, DeviceError) as e:
+                log.warning("on_exit failed: %s", e)
 
     def halt(self):
         """Stop sending without on_exit (config reload: a new Device takes over); returns once no frame is in flight."""
